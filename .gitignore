@@ -1,5 +1,2 @@
-.gradle/
-**/build/
-*.iml
-.idea/
-*.png
+__pycache__/
+*.pyc
