@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Touch WebView Game</title>
+<style>
+  body, html { margin:0; padding:0; overflow:hidden; touch-action:none; }
+  #player {
+    position:absolute;
+    width:50px;
+    height:50px;
+    background:red;
+    border-radius:10px;
+  }
+</style>
+</head>
+<body>
+<div id="player"></div>
+<script>
+const player = document.getElementById('player');
+let x = 100;
+let y = 100;
+function draw(){
+  player.style.left = x + 'px';
+  player.style.top = y + 'px';
+}
+
+draw();
+
+document.addEventListener('touchstart', move, {passive:false});
+document.addEventListener('touchmove', move, {passive:false});
+
+function move(e){
+  e.preventDefault();
+  const t = e.touches[0];
+  x = t.clientX - 25;
+  y = t.clientY - 25;
+  draw();
+}
+</script>
+</body>
+</html>
