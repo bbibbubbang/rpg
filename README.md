@@ -4,7 +4,7 @@ This repository contains simple movement demos implemented with HTML5 and JavaSc
 
 ## Playing
 
-- Open `index.html` in a modern web browser to try the canvas-based demo.
+- Open `index.html` in a modern web browser to try the pseudo-3D canvas demo.
 - The `android-webview` folder includes an example HTML page for touch input and a `MainActivity.kt` that loads it in an Android WebView.
 
 ## Controls
