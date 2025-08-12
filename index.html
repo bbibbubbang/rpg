@@ -2,10 +2,10 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Scrolling Background Demo</title>
+  <title>Pseudo 3D Map Demo</title>
   <style>
     body { margin: 0; overflow: hidden; }
-    #game { display: block; background: #000; }
+    #game { display: block; background: #87CEEB; }
   </style>
 </head>
 <body>
@@ -14,56 +14,67 @@
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 
-// Build a repeating background
-const bgCanvas = document.createElement('canvas');
-bgCanvas.width = canvas.width * 2;
-bgCanvas.height = canvas.height;
-const bgCtx = bgCanvas.getContext('2d');
+// Player holds 3D coordinates but is rendered as a 2D sprite.
+const player = { x: 0, y: 0, z: 80, size: 8, speed: 5 };
+const camera = { fov: 200 };
 
-// Sky gradient
-const grad = bgCtx.createLinearGradient(0, 0, 0, bgCanvas.height);
-grad.addColorStop(0, '#87CEEB');
-grad.addColorStop(1, '#FFFFFF');
-bgCtx.fillStyle = grad;
-bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
-
-// Ground stripes
-for (let i = 0; i < bgCanvas.width / 20; i++) {
-  bgCtx.fillStyle = i % 2 ? '#228B22' : '#32CD32';
-  bgCtx.fillRect(i * 20, bgCanvas.height - 50, 20, 50);
+// Project a 3D point into 2D canvas space.
+function project(x, y, z) {
+  const scale = camera.fov / z;
+  return {
+    x: canvas.width / 2 + x * scale,
+    y: canvas.height / 2 - y * scale,
+    scale
+  };
 }
 
-let bgX = 0;
-
-// Player data
-const player = { x: 50, y: canvas.height - 70, w: 20, h: 20, speed: 4 };
+// Draw a simple tiled ground plane to give a sense of depth.
+function drawGround() {
+  for (let gx = -100; gx < 100; gx += 20) {
+    for (let gz = 20; gz < 200; gz += 20) {
+      const p1 = project(gx, 0, gz);
+      const p2 = project(gx + 20, 0, gz);
+      const p3 = project(gx + 20, 0, gz + 20);
+      const p4 = project(gx, 0, gz + 20);
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.lineTo(p3.x, p3.y);
+      ctx.lineTo(p4.x, p4.y);
+      ctx.closePath();
+      ctx.fillStyle = ((gx / 20 + gz / 20) % 2 === 0) ? '#228B22' : '#32CD32';
+      ctx.fill();
+      ctx.strokeStyle = '#00000022';
+      ctx.stroke();
+    }
+  }
+}
 
 function loop() {
-  bgX -= 2;
-  if (bgX <= -canvas.width) bgX = 0;
-
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.drawImage(bgCanvas, bgX, 0);
-  ctx.drawImage(bgCanvas, bgX + bgCanvas.width / 2, 0);
+  drawGround();
 
+  const p = project(player.x, player.y, player.z);
+  const size = player.size * p.scale;
   ctx.fillStyle = 'red';
-  ctx.fillRect(player.x, player.y, player.w, player.h);
+  ctx.fillRect(p.x - size / 2, p.y - size, size, size);
 
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
 
+// Move the player on the 3D plane using arrow keys or WASD.
 document.addEventListener('keydown', (e) => {
   switch (e.key) {
     case 'ArrowUp':
     case 'w':
     case 'W':
-      player.y -= player.speed;
+      player.z -= player.speed;
       break;
     case 'ArrowDown':
     case 's':
     case 'S':
-      player.y += player.speed;
+      player.z += player.speed;
       break;
     case 'ArrowLeft':
     case 'a':
@@ -77,9 +88,9 @@ document.addEventListener('keydown', (e) => {
       break;
   }
 
-  // Constrain player to canvas
-  player.x = Math.max(0, Math.min(canvas.width - player.w, player.x));
-  player.y = Math.max(0, Math.min(canvas.height - player.h, player.y));
+  // Keep the player within bounds of the ground.
+  player.z = Math.max(20, Math.min(180, player.z));
+  player.x = Math.max(-90, Math.min(90, player.x));
 });
 </script>
 </body>
