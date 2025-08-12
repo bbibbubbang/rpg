@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Grid Movement Game</title>
+  <style>
+    body {
+      font-family: monospace;
+    }
+    #grid {
+      font-size: 20px;
+      line-height: 1.2;
+    }
+  </style>
+</head>
+<body>
+<pre id="grid"></pre>
+<script>
+const WIDTH = 10;
+const HEIGHT = 10;
+let playerX = Math.floor(WIDTH / 2);
+let playerY = Math.floor(HEIGHT / 2);
+const gridEl = document.getElementById('grid');
+
+function draw() {
+  const lines = [];
+  for (let y = 0; y < HEIGHT; y++) {
+    let line = '';
+    for (let x = 0; x < WIDTH; x++) {
+      line += (x === playerX && y === playerY) ? '@' : '.';
+    }
+    lines.push(line);
+  }
+  gridEl.textContent = lines.join('\n');
+}
+
+draw();
+
+function move(dx, dy) {
+  playerX = Math.min(WIDTH - 1, Math.max(0, playerX + dx));
+  playerY = Math.min(HEIGHT - 1, Math.max(0, playerY + dy));
+  draw();
+}
+
+document.addEventListener('keydown', (e) => {
+  switch (e.key) {
+    case 'ArrowUp':
+    case 'w':
+    case 'W':
+      move(0, -1);
+      break;
+    case 'ArrowDown':
+    case 's':
+    case 'S':
+      move(0, 1);
+      break;
+    case 'ArrowLeft':
+    case 'a':
+    case 'A':
+      move(-1, 0);
+      break;
+    case 'ArrowRight':
+    case 'd':
+    case 'D':
+      move(1, 0);
+      break;
+  }
+});
+</script>
+</body>
+</html>
