@@ -17,7 +17,7 @@ GRID_HEIGHT = 10
 def run_curses(stdscr):
     """Play the game using the curses interface."""
     curses.curs_set(0)
-    stdscr.nodelay(False)
+    stdscr.nodelay(True)
     stdscr.keypad(True)
 
     player_x = GRID_WIDTH // 2
@@ -31,17 +31,28 @@ def run_curses(stdscr):
                 stdscr.addch(y, x, char)
         stdscr.refresh()
 
-        key = stdscr.getch()
-        if key == ord('q'):
+        keys = set()
+        while True:
+            key = stdscr.getch()
+            if key == -1:
+                break
+            keys.add(key)
+
+        if ord('q') in keys:
             break
-        elif key == curses.KEY_UP and player_y > 0:
-            player_y -= 1
-        elif key == curses.KEY_DOWN and player_y < GRID_HEIGHT - 1:
-            player_y += 1
-        elif key == curses.KEY_LEFT and player_x > 0:
-            player_x -= 1
-        elif key == curses.KEY_RIGHT and player_x < GRID_WIDTH - 1:
-            player_x += 1
+
+        dy = (curses.KEY_DOWN in keys) - (curses.KEY_UP in keys)
+        dx = (curses.KEY_RIGHT in keys) - (curses.KEY_LEFT in keys)
+
+        new_x = player_x + dx
+        new_y = player_y + dy
+
+        if 0 <= new_x < GRID_WIDTH:
+            player_x = new_x
+        if 0 <= new_y < GRID_HEIGHT:
+            player_y = new_y
+
+        curses.napms(50)
 
 
 def run_text():
@@ -61,7 +72,7 @@ def run_text():
             )
             print(row)
 
-        command = input("Move with WASD or q to quit: ").strip().lower()
+        command = input().strip().lower()
         if command == 'q':
             break
         elif command == 'w' and player_y > 0:
