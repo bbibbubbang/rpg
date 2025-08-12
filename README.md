@@ -4,13 +4,16 @@ This is a simple text-based grid movement demo similar to RPG Maker movement.
 
 ## Controls
 
-- Arrow keys: Move the `@` character up, down, left, or right within the grid.
+- Arrow keys: Move the `@` character up, down, left, or right within the grid (when running in a real terminal).
+- `W`, `A`, `S`, `D`: Move up, left, down, or right when running in the fallback text mode.
 - `q`: Quit the game.
 
 ## Running
 
-The game uses Python's built-in `curses` module. Run it from a terminal:
+Run the script with Python:
 
 ```bash
 python main.py
 ```
+
+The game will try to use Python's built-in `curses` module for an arrow-key interface. If the terminal doesn't support curses (for example, when running in certain IDEs or non-interactive environments), the script automatically falls back to a simple text mode using the `WASD` controls.
