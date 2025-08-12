@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Grid Game</title>
+<style>
+body { margin:0; display:flex; flex-direction:column; height:100vh; align-items:center; justify-content:center; }
+#game { display:grid; grid-template-columns:repeat(10,32px); grid-template-rows:repeat(10,32px); }
+.tile { width:32px; height:32px; border:1px solid #ccc; box-sizing:border-box; }
+#player { background:red; width:100%; height:100%; }
+#controls { margin-top:10px; display:grid; grid-template-columns:repeat(3,50px); grid-template-rows:repeat(2,50px); gap:5px; }
+#controls button { width:50px; height:50px; font-size:24px; }
+#up { grid-column:2; }
+#left { grid-row:2; grid-column:1; }
+#down { grid-row:2; grid-column:2; }
+#right { grid-row:2; grid-column:3; }
+</style>
+</head>
+<body>
+<div id="game"></div>
+<div id="controls">
+  <button id="up">▲</button>
+  <button id="left">◀</button>
+  <button id="down">▼</button>
+  <button id="right">▶</button>
+</div>
+<script>
+const game = document.getElementById('game');
+for(let i=0;i<100;i++){
+  const t=document.createElement('div');
+  t.className='tile';
+  game.appendChild(t);
+}
+let x=1,y=1;
+const player=document.createElement('div');
+player.id='player';
+function draw(){
+  const index=(y-1)*10+(x-1);
+  game.children[index].appendChild(player);
+}
+draw();
+function move(dx,dy){
+  x=Math.max(1,Math.min(10,x+dx));
+  y=Math.max(1,Math.min(10,y+dy));
+  draw();
+}
+function bind(id,dx,dy){
+  const el=document.getElementById(id);
+  el.addEventListener('touchstart',e=>{e.preventDefault();move(dx,dy);});
+  el.addEventListener('click',e=>{e.preventDefault();move(dx,dy);});
+}
+bind('up',0,-1);
+bind('down',0,1);
+bind('left',-1,0);
+bind('right',1,0);
+</script>
+</body>
+</html>
