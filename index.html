@@ -2,96 +2,64 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Pseudo 3D Map Demo</title>
+  <title>3D Map Demo</title>
   <style>
     body { margin: 0; overflow: hidden; }
-    #game { display: block; background: #87CEEB; }
   </style>
 </head>
 <body>
-<canvas id="game" width="400" height="300"></canvas>
+<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
 <script>
-const canvas = document.getElementById('game');
-const ctx = canvas.getContext('2d');
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x87ceeb);
 
-// Player holds 3D coordinates but is rendered as a 2D sprite.
-const player = { x: 0, y: 0, z: 80, size: 8, speed: 5 };
-const camera = { fov: 200 };
+  const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 
-// Project a 3D point into 2D canvas space.
-function project(x, y, z) {
-  const scale = camera.fov / z;
-  return {
-    x: canvas.width / 2 + x * scale,
-    y: canvas.height / 2 - y * scale,
-    scale
-  };
-}
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  document.body.appendChild(renderer.domElement);
 
-// Draw a simple tiled ground plane to give a sense of depth.
-function drawGround() {
-  for (let gx = -100; gx < 100; gx += 20) {
-    for (let gz = 20; gz < 200; gz += 20) {
-      const p1 = project(gx, 0, gz);
-      const p2 = project(gx + 20, 0, gz);
-      const p3 = project(gx + 20, 0, gz + 20);
-      const p4 = project(gx, 0, gz + 20);
-      ctx.beginPath();
-      ctx.moveTo(p1.x, p1.y);
-      ctx.lineTo(p2.x, p2.y);
-      ctx.lineTo(p3.x, p3.y);
-      ctx.lineTo(p4.x, p4.y);
-      ctx.closePath();
-      ctx.fillStyle = ((gx / 20 + gz / 20) % 2 === 0) ? '#228B22' : '#32CD32';
-      ctx.fill();
-      ctx.strokeStyle = '#00000022';
-      ctx.stroke();
-    }
-  }
-}
+  // Ground grid
+  const grid = new THREE.GridHelper(200, 20, 0x444444, 0x88cc88);
+  scene.add(grid);
 
-function loop() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  drawGround();
+  // Player cube
+  const geometry = new THREE.BoxGeometry(1, 1, 1);
+  const material = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+  const player = new THREE.Mesh(geometry, material);
+  player.position.set(0, 0.5, 0);
+  scene.add(player);
 
-  const p = project(player.x, player.y, player.z);
-  const size = player.size * p.scale;
-  ctx.fillStyle = 'red';
-  ctx.fillRect(p.x - size / 2, p.y - size, size, size);
+  camera.position.set(0, 10, 20);
+  camera.lookAt(player.position);
 
-  requestAnimationFrame(loop);
-}
-requestAnimationFrame(loop);
+  const speed = 0.5;
+  const keys = {};
+  document.addEventListener('keydown', (e) => { keys[e.key.toLowerCase()] = true; });
+  document.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
 
-// Move the player on the 3D plane using arrow keys or WASD.
-document.addEventListener('keydown', (e) => {
-  switch (e.key) {
-    case 'ArrowUp':
-    case 'w':
-    case 'W':
-      player.z -= player.speed;
-      break;
-    case 'ArrowDown':
-    case 's':
-    case 'S':
-      player.z += player.speed;
-      break;
-    case 'ArrowLeft':
-    case 'a':
-    case 'A':
-      player.x -= player.speed;
-      break;
-    case 'ArrowRight':
-    case 'd':
-    case 'D':
-      player.x += player.speed;
-      break;
+  function update() {
+    if (keys['w'] || keys['arrowup']) player.position.z -= speed;
+    if (keys['s'] || keys['arrowdown']) player.position.z += speed;
+    if (keys['a'] || keys['arrowleft']) player.position.x -= speed;
+    if (keys['d'] || keys['arrowright']) player.position.x += speed;
+
+    camera.position.set(player.position.x, player.position.y + 10, player.position.z + 20);
+    camera.lookAt(player.position);
   }
 
-  // Keep the player within bounds of the ground.
-  player.z = Math.max(20, Math.min(180, player.z));
-  player.x = Math.max(-90, Math.min(90, player.x));
-});
+  function animate() {
+    requestAnimationFrame(animate);
+    update();
+    renderer.render(scene, camera);
+  }
+  animate();
+
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
 </script>
 </body>
 </html>
