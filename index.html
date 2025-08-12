@@ -107,6 +107,7 @@
   document.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
 
   let walkOffset = 0;
+  let facingRight = true;
 
   function update() {
     const moving = keys['w'] || keys['arrowup'] ||
@@ -115,10 +116,16 @@
                    keys['d'] || keys['arrowright'];
 
     if (moving) {
+      if (keys['a'] || keys['arrowleft']) {
+        player.position.x -= speed;
+        facingRight = false;
+      }
+      if (keys['d'] || keys['arrowright']) {
+        player.position.x += speed;
+        facingRight = true;
+      }
       if (keys['w'] || keys['arrowup']) player.position.z -= speed;
       if (keys['s'] || keys['arrowdown']) player.position.z += speed;
-      if (keys['a'] || keys['arrowleft']) player.position.x -= speed;
-      if (keys['d'] || keys['arrowright']) player.position.x += speed;
 
       walkOffset += 0.2;
       const angle = Math.sin(walkOffset) * 0.5;
@@ -132,6 +139,8 @@
       player.userData.leftArm.rotation.x = 0;
       player.userData.rightArm.rotation.x = 0;
     }
+
+    player.rotation.y = facingRight ? -Math.PI / 2 : Math.PI / 2;
 
     camera.position.set(player.position.x, player.position.y + 10, player.position.z + 20);
     camera.lookAt(player.position);
