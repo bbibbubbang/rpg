@@ -17,3 +17,7 @@ python main.py
 ```
 
 The game will try to use Python's built-in `curses` module for an arrow-key interface. If the terminal doesn't support curses (for example, when running in certain IDEs or non-interactive environments), the script automatically falls back to a simple text mode using the `WASD` controls.
+
+## Playing in the Browser
+
+Open `index.html` in a modern web browser to play a JavaScript version of the same grid movement game without needing Python.
