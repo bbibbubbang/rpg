@@ -300,6 +300,7 @@
   camera.lookAt(player.position);
 
   let speed = 0.05;
+  const MAX_STEP = 0.5;
   const keys = {};
   let gravity = 0.002;
   let jumpStrength = 0.1;
@@ -443,22 +444,33 @@
       }
     } else if (moving) {
       move.normalize();
-      player.position.x += move.x * speed;
-      player.position.z += move.z * speed;
-      player.position.x = THREE.MathUtils.clamp(player.position.x, -HALF_MAP, HALF_MAP);
-      player.position.z = THREE.MathUtils.clamp(player.position.z, -HALF_MAP, HALF_MAP);
-      if (move.x !== 0) {
-        facingRight = move.x > 0;
+      const nextX = THREE.MathUtils.clamp(player.position.x + move.x * speed, -HALF_MAP, HALF_MAP);
+      const nextZ = THREE.MathUtils.clamp(player.position.z + move.z * speed, -HALF_MAP, HALF_MAP);
+      const currY = getHeight(player.position.x, player.position.z) + 0.5;
+      const nextY = getHeight(nextX, nextZ) + 0.5;
+
+      if (nextY - currY <= MAX_STEP) {
+        player.position.x = nextX;
+        player.position.z = nextZ;
+        player.position.y = nextY;
+        if (move.x !== 0) {
+          facingRight = move.x > 0;
+        }
+
+        walkOffset += 0.2;
+        const angle = Math.sin(walkOffset) * 0.5;
+        player.userData.leftLeg.rotation.x = -angle;
+        player.userData.rightLeg.rotation.x = angle;
+        player.userData.leftArm.rotation.x = angle;
+        player.userData.rightArm.rotation.x = -angle;
+      } else {
+        player.userData.leftLeg.rotation.x = 0;
+        player.userData.rightLeg.rotation.x = 0;
+        player.userData.leftArm.rotation.x = 0;
+        player.userData.rightArm.rotation.x = 0;
+        player.position.y = currY;
+        autoMove = false;
       }
-
-      walkOffset += 0.2;
-      const angle = Math.sin(walkOffset) * 0.5;
-      player.userData.leftLeg.rotation.x = -angle;
-      player.userData.rightLeg.rotation.x = angle;
-      player.userData.leftArm.rotation.x = angle;
-      player.userData.rightArm.rotation.x = -angle;
-
-      player.position.y = getHeight(player.position.x, player.position.z) + 0.5;
     } else {
       player.userData.leftLeg.rotation.x = 0;
       player.userData.rightLeg.rotation.x = 0;
