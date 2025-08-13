@@ -496,7 +496,8 @@
       const currY = getHeight(player.position.x, player.position.z) + 0.5;
       const nextY = getHeight(nextX, nextZ) + 0.5;
 
-      if (nextY - currY <= MAX_STEP) {
+      const heightDiff = nextY - currY;
+      if (Math.abs(heightDiff) <= MAX_STEP) {
         player.position.x = nextX;
         player.position.z = nextZ;
         player.position.y = nextY;
