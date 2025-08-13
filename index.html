@@ -88,6 +88,9 @@
 <script>
   const MAP_SIZE = 100;
   const HALF_MAP = MAP_SIZE / 2;
+  const WALL_THICKNESS = 1;
+  const BOUNDARY_MIN = -HALF_MAP + WALL_THICKNESS / 2;
+  const BOUNDARY_MAX = HALF_MAP - WALL_THICKNESS / 2;
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x87ceeb);
@@ -142,10 +145,9 @@
   // Boundaries to keep player inside the map
   (function addBoundaries() {
     const wallHeight = 3;
-    const wallThickness = 1;
     const material = new THREE.MeshBasicMaterial({ color: 0x654321 });
-    const geomH = new THREE.BoxGeometry(MAP_SIZE, wallHeight, wallThickness);
-    const geomV = new THREE.BoxGeometry(wallThickness, wallHeight, MAP_SIZE);
+    const geomH = new THREE.BoxGeometry(MAP_SIZE, wallHeight, WALL_THICKNESS);
+    const geomV = new THREE.BoxGeometry(WALL_THICKNESS, wallHeight, MAP_SIZE);
 
     const north = new THREE.Mesh(geomH, material);
     north.position.set(0, wallHeight / 2, -HALF_MAP);
@@ -472,8 +474,8 @@
     if (isJumping) {
       player.position.x += jumpMove.x;
       player.position.z += jumpMove.z;
-      player.position.x = THREE.MathUtils.clamp(player.position.x, -HALF_MAP, HALF_MAP);
-      player.position.z = THREE.MathUtils.clamp(player.position.z, -HALF_MAP, HALF_MAP);
+      player.position.x = THREE.MathUtils.clamp(player.position.x, BOUNDARY_MIN, BOUNDARY_MAX);
+      player.position.z = THREE.MathUtils.clamp(player.position.z, BOUNDARY_MIN, BOUNDARY_MAX);
       velocityY -= gravity;
       player.position.y += velocityY;
 
@@ -491,8 +493,8 @@
       }
     } else if (moving) {
       move.normalize();
-      const nextX = THREE.MathUtils.clamp(player.position.x + move.x * speed, -HALF_MAP, HALF_MAP);
-      const nextZ = THREE.MathUtils.clamp(player.position.z + move.z * speed, -HALF_MAP, HALF_MAP);
+      const nextX = THREE.MathUtils.clamp(player.position.x + move.x * speed, BOUNDARY_MIN, BOUNDARY_MAX);
+      const nextZ = THREE.MathUtils.clamp(player.position.z + move.z * speed, BOUNDARY_MIN, BOUNDARY_MAX);
       const currY = getHeight(player.position.x, player.position.z) + 0.5;
       const nextY = getHeight(nextX, nextZ) + 0.5;
 
