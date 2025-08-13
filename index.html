@@ -2,12 +2,36 @@
 <html>
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>3D Map Demo</title>
   <style>
-    body { margin: 0; overflow: hidden; }
+    body { margin: 0; overflow: hidden; touch-action: none; }
+    #joystick {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      width: 120px;
+      height: 120px;
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      touch-action: none;
+    }
+    #joystick::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 40px;
+      height: 40px;
+      margin-left: -20px;
+      margin-top: -20px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 50%;
+    }
   </style>
 </head>
 <body>
+<div id="joystick"></div>
 <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
 <script>
   const scene = new THREE.Scene();
@@ -103,29 +127,83 @@
 
   const speed = 0.5;
   const keys = {};
-  document.addEventListener('keydown', (e) => { keys[e.key.toLowerCase()] = true; });
+  document.addEventListener('keydown', (e) => { keys[e.key.toLowerCase()] = true; autoMove = false; });
   document.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
+
+  // On-screen joystick
+  const joystick = document.getElementById('joystick');
+  const padDir = { x: 0, z: 0 };
+  let padActive = false;
+
+  function updatePad(e) {
+    const rect = joystick.getBoundingClientRect();
+    const x = e.clientX - rect.left - rect.width / 2;
+    const y = e.clientY - rect.top - rect.height / 2;
+    const len = Math.hypot(x, y);
+    if (len > 0) {
+      padDir.x = x / len;
+      padDir.z = y / len;
+    }
+  }
+
+  joystick.addEventListener('pointerdown', (e) => {
+    padActive = true;
+    joystick.setPointerCapture(e.pointerId);
+    autoMove = false;
+    updatePad(e);
+  });
+  joystick.addEventListener('pointermove', (e) => {
+    if (padActive) updatePad(e);
+  });
+  function resetPad() { padActive = false; padDir.x = 0; padDir.z = 0; }
+  joystick.addEventListener('pointerup', resetPad);
+  joystick.addEventListener('pointercancel', resetPad);
+
+  // Tap to move
+  const raycaster = new THREE.Raycaster();
+  const tapTarget = new THREE.Vector3();
+  let autoMove = false;
+
+  renderer.domElement.addEventListener('pointerdown', (e) => {
+    if (e.target === joystick) return;
+    const rect = renderer.domElement.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    const y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+    raycaster.setFromCamera(new THREE.Vector2(x, y), camera);
+    const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    raycaster.ray.intersectPlane(plane, tapTarget);
+    autoMove = true;
+  });
 
   let walkOffset = 0;
   let facingRight = true;
 
   function update() {
-    const moving = keys['w'] || keys['arrowup'] ||
-                   keys['s'] || keys['arrowdown'] ||
-                   keys['a'] || keys['arrowleft'] ||
-                   keys['d'] || keys['arrowright'];
+    const move = new THREE.Vector3();
+    if (keys['a'] || keys['arrowleft']) move.x -= 1;
+    if (keys['d'] || keys['arrowright']) move.x += 1;
+    if (keys['w'] || keys['arrowup']) move.z -= 1;
+    if (keys['s'] || keys['arrowdown']) move.z += 1;
 
+    move.x += padDir.x;
+    move.z += padDir.z;
+
+    if (autoMove) {
+      const dir = tapTarget.clone().sub(player.position);
+      if (dir.length() < 0.1) {
+        autoMove = false;
+      } else {
+        dir.normalize();
+        move.add(dir);
+      }
+    }
+
+    const moving = move.lengthSq() > 0;
     if (moving) {
-      if (keys['a'] || keys['arrowleft']) {
-        player.position.x -= speed;
-        facingRight = false;
-      }
-      if (keys['d'] || keys['arrowright']) {
-        player.position.x += speed;
-        facingRight = true;
-      }
-      if (keys['w'] || keys['arrowup']) player.position.z -= speed;
-      if (keys['s'] || keys['arrowdown']) player.position.z += speed;
+      move.normalize();
+      player.position.x += move.x * speed;
+      player.position.z += move.z * speed;
+      facingRight = move.x >= 0;
 
       walkOffset += 0.2;
       const angle = Math.sin(walkOffset) * 0.5;
