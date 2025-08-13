@@ -42,11 +42,48 @@
       user-select: none;
       touch-action: none;
     }
+
+    #debugToggle {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 80px;
+      height: 30px;
+      background: rgba(0, 0, 0, 0.5);
+      color: #fff;
+      line-height: 30px;
+      text-align: center;
+      font-weight: bold;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    #debugPanel {
+      position: absolute;
+      top: 60px;
+      right: 20px;
+      background: rgba(255, 255, 255, 0.8);
+      padding: 10px;
+      border-radius: 8px;
+      display: none;
+      font-size: 14px;
+    }
+
+    #debugPanel label {
+      display: block;
+      margin-bottom: 5px;
+    }
   </style>
 </head>
 <body>
 <div id="joystick"></div>
 <div id="jumpButton">JUMP</div>
+<div id="debugToggle">DEBUG</div>
+<div id="debugPanel">
+  <label>Speed <input type="range" id="speedInput" min="0" max="1" step="0.01" value="0.2"></label>
+  <label>Jump <input type="range" id="jumpInput" min="0" max="1" step="0.01" value="0.2"></label>
+  <label>Gravity <input type="range" id="gravityInput" min="0" max="0.05" step="0.001" value="0.01"></label>
+</div>
 <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
 <script>
   const scene = new THREE.Scene();
@@ -77,6 +114,25 @@
     const head = new THREE.Mesh(new THREE.SphereGeometry(0.3, 32, 32), headMaterial);
     head.position.y = 0.9;
     group.add(head);
+
+    // Facial features
+    const eyeGeom = new THREE.SphereGeometry(0.03, 16, 16);
+    const eyeMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
+    const leftEye = new THREE.Mesh(eyeGeom, eyeMaterial);
+    leftEye.position.set(-0.1, 0.95, 0.26);
+    const rightEye = new THREE.Mesh(eyeGeom, eyeMaterial);
+    rightEye.position.set(0.1, 0.95, 0.26);
+
+    const mouthGeom = new THREE.BoxGeometry(0.1, 0.02, 0.02);
+    const mouthMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+    const mouth = new THREE.Mesh(mouthGeom, mouthMaterial);
+    mouth.position.set(0, 0.85, 0.28);
+
+    const hairMaterial = new THREE.MeshBasicMaterial({ color: 0x663300 });
+    const hair = new THREE.Mesh(new THREE.SphereGeometry(0.32, 32, 32, 0, Math.PI * 2, 0, Math.PI / 2), hairMaterial);
+    hair.position.y = 1.15;
+
+    group.add(leftEye, rightEye, mouth, hair);
 
     function createLimb(width, height, material) {
       const limb = new THREE.Group();
@@ -140,12 +196,26 @@
   camera.position.set(0, 10, 20);
   camera.lookAt(player.position);
 
-  const speed = 0.2;
+  let speed = 0.2;
   const keys = {};
-  const gravity = 0.01;
+  let gravity = 0.01;
+  let jumpStrength = 0.2;
   let velocityY = 0;
   let isJumping = false;
   const jumpMove = new THREE.Vector3();
+
+  const debugToggle = document.getElementById('debugToggle');
+  const debugPanel = document.getElementById('debugPanel');
+  debugToggle.addEventListener('click', () => {
+    debugPanel.style.display = debugPanel.style.display === 'none' ? 'block' : 'none';
+  });
+
+  const speedInput = document.getElementById('speedInput');
+  const jumpInput = document.getElementById('jumpInput');
+  const gravityInput = document.getElementById('gravityInput');
+  speedInput.addEventListener('input', () => { speed = parseFloat(speedInput.value); });
+  jumpInput.addEventListener('input', () => { jumpStrength = parseFloat(jumpInput.value); });
+  gravityInput.addEventListener('input', () => { gravity = parseFloat(gravityInput.value); });
   document.addEventListener('keydown', (e) => {
     const key = e.key.toLowerCase();
     keys[key] = true;
@@ -187,7 +257,7 @@
   function startJump() {
     if (isJumping) return;
     isJumping = true;
-    velocityY = 0.2;
+    velocityY = jumpStrength;
     autoMove = false;
     jumpMove.set(0, 0, 0);
     if (keys['a'] || keys['arrowleft']) jumpMove.x -= 1;
@@ -270,10 +340,10 @@
 
       walkOffset += 0.2;
       const angle = Math.sin(walkOffset) * 0.5;
-      player.userData.leftLeg.rotation.x = angle;
-      player.userData.rightLeg.rotation.x = -angle;
-      player.userData.leftArm.rotation.x = -angle;
-      player.userData.rightArm.rotation.x = angle;
+      player.userData.leftLeg.rotation.x = -angle;
+      player.userData.rightLeg.rotation.x = angle;
+      player.userData.leftArm.rotation.x = angle;
+      player.userData.rightArm.rotation.x = -angle;
     } else {
       player.userData.leftLeg.rotation.x = 0;
       player.userData.rightLeg.rotation.x = 0;
@@ -281,7 +351,7 @@
       player.userData.rightArm.rotation.x = 0;
     }
 
-    player.rotation.y = facingRight ? -Math.PI / 3 : Math.PI / 3;
+    player.rotation.y = facingRight ? Math.PI / 3 : -Math.PI / 3;
 
     camera.position.set(player.position.x, player.position.y + 10, player.position.z + 20);
     camera.lookAt(player.position);
