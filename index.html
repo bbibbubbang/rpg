@@ -80,9 +80,9 @@
 <div id="jumpButton">JUMP</div>
 <div id="debugToggle">DEBUG</div>
 <div id="debugPanel">
-  <label>Speed <input type="range" id="speedInput" min="0" max="1" step="0.01" value="0.2"></label>
-  <label>Jump <input type="range" id="jumpInput" min="0" max="1" step="0.01" value="0.2"></label>
-  <label>Gravity <input type="range" id="gravityInput" min="0" max="0.05" step="0.001" value="0.01"></label>
+  <label>Speed <input type="number" id="speedInput" min="0" max="1" step="0.01" value="0.2"></label>
+  <label>Jump <input type="number" id="jumpInput" min="0" max="1" step="0.01" value="0.2"></label>
+  <label>Gravity <input type="number" id="gravityInput" min="0" max="0.05" step="0.001" value="0.01"></label>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
 <script>
@@ -116,12 +116,20 @@
     group.add(head);
 
     // Facial features
-    const eyeGeom = new THREE.SphereGeometry(0.03, 16, 16);
-    const eyeMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
-    const leftEye = new THREE.Mesh(eyeGeom, eyeMaterial);
-    leftEye.position.set(-0.1, 0.95, 0.26);
-    const rightEye = new THREE.Mesh(eyeGeom, eyeMaterial);
-    rightEye.position.set(0.1, 0.95, 0.26);
+    const eyeWhiteGeom = new THREE.SphereGeometry(0.06, 16, 16);
+    const eyeWhiteMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const pupilGeom = new THREE.SphereGeometry(0.02, 16, 16);
+    const pupilMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+
+    const leftEyeWhite = new THREE.Mesh(eyeWhiteGeom, eyeWhiteMat);
+    leftEyeWhite.position.set(-0.12, 0.95, 0.24);
+    const rightEyeWhite = new THREE.Mesh(eyeWhiteGeom, eyeWhiteMat);
+    rightEyeWhite.position.set(0.12, 0.95, 0.24);
+
+    const leftPupil = new THREE.Mesh(pupilGeom, pupilMat);
+    leftPupil.position.set(-0.12, 0.95, 0.30);
+    const rightPupil = new THREE.Mesh(pupilGeom, pupilMat);
+    rightPupil.position.set(0.12, 0.95, 0.30);
 
     const mouthGeom = new THREE.BoxGeometry(0.1, 0.02, 0.02);
     const mouthMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
@@ -132,7 +140,7 @@
     const hair = new THREE.Mesh(new THREE.SphereGeometry(0.32, 32, 32, 0, Math.PI * 2, 0, Math.PI / 2), hairMaterial);
     hair.position.y = 1.15;
 
-    group.add(leftEye, rightEye, mouth, hair);
+    group.add(leftEyeWhite, rightEyeWhite, leftPupil, rightPupil, mouth, hair);
 
     function createLimb(width, height, material) {
       const limb = new THREE.Group();
