@@ -80,9 +80,9 @@
 <div id="jumpButton">JUMP</div>
 <div id="debugToggle">DEBUG</div>
 <div id="debugPanel">
-  <label>Speed <input type="number" id="speedInput" min="0" max="1" step="0.01" value="0.2"></label>
-  <label>Jump <input type="number" id="jumpInput" min="0" max="1" step="0.01" value="0.2"></label>
-  <label>Gravity <input type="number" id="gravityInput" min="0" max="0.05" step="0.001" value="0.01"></label>
+  <label>Speed <input type="number" id="speedInput" min="0" max="1" step="0.01" value="0.05"></label>
+  <label>Jump <input type="number" id="jumpInput" min="0" max="1" step="0.01" value="0.1"></label>
+  <label>Gravity <input type="number" id="gravityInput" min="0" max="0.05" step="0.001" value="0.002"></label>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
 <script>
@@ -94,6 +94,15 @@
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
+
+  // Ground
+  const ground = new THREE.Mesh(
+    new THREE.PlaneGeometry(200, 200),
+    new THREE.MeshBasicMaterial({ color: 0x228B22 })
+  );
+  ground.rotation.x = -Math.PI / 2;
+  ground.position.y = -0.01;
+  scene.add(ground);
 
   // Ground grid
   const grid = new THREE.GridHelper(200, 20, 0x444444, 0x88cc88);
@@ -165,9 +174,42 @@
     return group;
   }
 
+  function createShop(name, color, x, z) {
+    const shop = new THREE.Group();
+    const building = new THREE.Mesh(
+      new THREE.BoxGeometry(2, 1.5, 2),
+      new THREE.MeshBasicMaterial({ color })
+    );
+    building.position.y = 0.75;
+    shop.add(building);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#000000';
+    ctx.font = '48px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(name, canvas.width / 2, canvas.height / 2);
+    const texture = new THREE.CanvasTexture(canvas);
+    const label = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture }));
+    label.position.set(0, 1.5, 0);
+    label.scale.set(3, 1.5, 1);
+    shop.add(label);
+
+    shop.position.set(x, 0, z);
+    return shop;
+  }
+
   const player = createPlayer();
   player.position.set(0, 0.5, 0);
   scene.add(player);
+
+  scene.add(createShop('잡화상점', 0xffaa00, -5, -5));
+  scene.add(createShop('장비상점', 0x00aaff, 5, -5));
 
   // Test NPC rendered from a canvas texture
   function createNPC() {
@@ -204,10 +246,10 @@
   camera.position.set(0, 10, 20);
   camera.lookAt(player.position);
 
-  let speed = 0.2;
+  let speed = 0.05;
   const keys = {};
-  let gravity = 0.01;
-  let jumpStrength = 0.2;
+  let gravity = 0.002;
+  let jumpStrength = 0.1;
   let velocityY = 0;
   let isJumping = false;
   const jumpMove = new THREE.Vector3();
