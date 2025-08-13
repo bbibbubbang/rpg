@@ -86,6 +86,9 @@
 </div>
 <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
 <script>
+  const MAP_SIZE = 100;
+  const HALF_MAP = MAP_SIZE / 2;
+
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x87ceeb);
 
@@ -95,18 +98,66 @@
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
 
-  // Ground
+  // Lighting for shaded terrain
+  const light = new THREE.DirectionalLight(0xffffff, 1);
+  light.position.set(10, 20, 10);
+  scene.add(light);
+  scene.add(new THREE.AmbientLight(0xffffff, 0.3));
+
+  // Terrain height function
+  function getHeight(x, z) {
+    const hx = 15;
+    const hz = 15;
+    const radius = 20;
+    const dist = Math.hypot(x - hx, z - hz);
+    if (dist < radius) {
+      return Math.cos((dist / radius) * Math.PI) * 3;
+    }
+    return 0;
+  }
+
+  // Ground with simple hill
+  const groundGeometry = new THREE.PlaneGeometry(MAP_SIZE, MAP_SIZE, 64, 64);
+  const pos = groundGeometry.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i);
+    const z = pos.getY(i);
+    const y = getHeight(x, z);
+    pos.setZ(i, y);
+  }
+  groundGeometry.computeVertexNormals();
+
   const ground = new THREE.Mesh(
-    new THREE.PlaneGeometry(200, 200),
-    new THREE.MeshBasicMaterial({ color: 0x228B22 })
+    groundGeometry,
+    new THREE.MeshLambertMaterial({ color: 0x228B22 })
   );
   ground.rotation.x = -Math.PI / 2;
-  ground.position.y = -0.01;
   scene.add(ground);
 
   // Ground grid
-  const grid = new THREE.GridHelper(200, 20, 0x444444, 0x88cc88);
+  const grid = new THREE.GridHelper(MAP_SIZE, MAP_SIZE / 5, 0x444444, 0x88cc88);
+  grid.position.y = 0.01;
   scene.add(grid);
+
+  // Boundaries to keep player inside the map
+  (function addBoundaries() {
+    const wallHeight = 3;
+    const wallThickness = 1;
+    const material = new THREE.MeshBasicMaterial({ color: 0x654321 });
+    const geomH = new THREE.BoxGeometry(MAP_SIZE, wallHeight, wallThickness);
+    const geomV = new THREE.BoxGeometry(wallThickness, wallHeight, MAP_SIZE);
+
+    const north = new THREE.Mesh(geomH, material);
+    north.position.set(0, wallHeight / 2, -HALF_MAP);
+    const south = new THREE.Mesh(geomH, material);
+    south.position.set(0, wallHeight / 2, HALF_MAP);
+    const west = new THREE.Mesh(geomV, material);
+    west.position.set(-HALF_MAP, wallHeight / 2, 0);
+    const east = new THREE.Mesh(geomV, material);
+    east.position.set(HALF_MAP, wallHeight / 2, 0);
+
+    scene.add(north, south, west, east);
+  })();
 
   // Player character (2-head chibi)
   function createPlayer() {
@@ -195,8 +246,10 @@
     ctx.textBaseline = 'middle';
     ctx.fillText(name, canvas.width / 2, canvas.height / 2);
     const texture = new THREE.CanvasTexture(canvas);
-    const label = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture }));
-    label.position.set(0, 1.5, 0);
+    const labelMaterial = new THREE.SpriteMaterial({ map: texture, depthTest: false });
+    const label = new THREE.Sprite(labelMaterial);
+    label.renderOrder = 1;
+    label.position.set(0, 1.5, 1.1);
     label.scale.set(3, 1.5, 1);
     shop.add(label);
 
@@ -205,7 +258,7 @@
   }
 
   const player = createPlayer();
-  player.position.set(0, 0.5, 0);
+  player.position.set(0, getHeight(0, 0) + 0.5, 0);
   scene.add(player);
 
   scene.add(createShop('잡화상점', 0xffaa00, -5, -5));
@@ -369,16 +422,20 @@
     if (isJumping) {
       player.position.x += jumpMove.x;
       player.position.z += jumpMove.z;
+      player.position.x = THREE.MathUtils.clamp(player.position.x, -HALF_MAP, HALF_MAP);
+      player.position.z = THREE.MathUtils.clamp(player.position.z, -HALF_MAP, HALF_MAP);
       velocityY -= gravity;
       player.position.y += velocityY;
+
+      const groundY = getHeight(player.position.x, player.position.z) + 0.5;
 
       player.userData.leftLeg.rotation.x = 0.5;
       player.userData.rightLeg.rotation.x = 0.5;
       player.userData.leftArm.rotation.x = -0.5;
       player.userData.rightArm.rotation.x = -0.5;
 
-      if (player.position.y <= 0.5) {
-        player.position.y = 0.5;
+      if (player.position.y <= groundY) {
+        player.position.y = groundY;
         isJumping = false;
         velocityY = 0;
       }
@@ -386,6 +443,8 @@
       move.normalize();
       player.position.x += move.x * speed;
       player.position.z += move.z * speed;
+      player.position.x = THREE.MathUtils.clamp(player.position.x, -HALF_MAP, HALF_MAP);
+      player.position.z = THREE.MathUtils.clamp(player.position.z, -HALF_MAP, HALF_MAP);
       facingRight = move.x >= 0;
 
       walkOffset += 0.2;
@@ -394,11 +453,14 @@
       player.userData.rightLeg.rotation.x = angle;
       player.userData.leftArm.rotation.x = angle;
       player.userData.rightArm.rotation.x = -angle;
+
+      player.position.y = getHeight(player.position.x, player.position.z) + 0.5;
     } else {
       player.userData.leftLeg.rotation.x = 0;
       player.userData.rightLeg.rotation.x = 0;
       player.userData.leftArm.rotation.x = 0;
       player.userData.rightArm.rotation.x = 0;
+      player.position.y = getHeight(player.position.x, player.position.z) + 0.5;
     }
 
     player.rotation.y = facingRight ? Math.PI / 3 : -Math.PI / 3;
