@@ -225,13 +225,13 @@
     return group;
   }
 
-  function createShop(name, color, x, z) {
+  function createShop(name, color, x, z, iconDrawer) {
     const shop = new THREE.Group();
     const building = new THREE.Mesh(
-      new THREE.BoxGeometry(2, 1.5, 2),
+      new THREE.BoxGeometry(4, 3, 4),
       new THREE.MeshBasicMaterial({ color })
     );
-    building.position.y = 0.75;
+    building.position.y = 1.5;
     shop.add(building);
 
     const canvas = document.createElement('canvas');
@@ -249,20 +249,67 @@
     const labelMaterial = new THREE.SpriteMaterial({ map: texture, depthTest: false });
     const label = new THREE.Sprite(labelMaterial);
     label.renderOrder = 1;
-    label.position.set(0, 1.5, 1.1);
-    label.scale.set(3, 1.5, 1);
+    label.position.set(0, 3, 2.1);
+    label.scale.set(6, 3, 1);
     shop.add(label);
+
+    if (iconDrawer) {
+      const iconCanvas = document.createElement('canvas');
+      iconCanvas.width = 128;
+      iconCanvas.height = 128;
+      const iconCtx = iconCanvas.getContext('2d');
+      iconDrawer(iconCtx);
+      const iconTexture = new THREE.CanvasTexture(iconCanvas);
+      const iconMaterial = new THREE.SpriteMaterial({ map: iconTexture, depthTest: false, transparent: true });
+      const icon = new THREE.Sprite(iconMaterial);
+      icon.position.set(0, 1.5, 2.1);
+      icon.scale.set(2, 2, 1);
+      shop.add(icon);
+    }
 
     shop.position.set(x, 0, z);
     return shop;
+  }
+
+  function drawPotionIcon(ctx) {
+    ctx.clearRect(0, 0, 128, 128);
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(48, 20);
+    ctx.lineTo(80, 20);
+    ctx.lineTo(80, 60);
+    ctx.quadraticCurveTo(80, 90, 64, 100);
+    ctx.quadraticCurveTo(48, 90, 48, 60);
+    ctx.closePath();
+    ctx.fillStyle = '#7fffd4';
+    ctx.fill();
+    ctx.stroke();
+  }
+
+  function drawWeaponIcon(ctx) {
+    ctx.clearRect(0, 0, 128, 128);
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 4;
+    ctx.fillStyle = '#cccccc';
+    ctx.fillRect(60, 20, 8, 60);
+    ctx.strokeRect(60, 20, 8, 60);
+    ctx.fillStyle = '#8b4513';
+    ctx.fillRect(55, 65, 18, 8);
+    ctx.strokeRect(55, 65, 18, 8);
+    ctx.beginPath();
+    ctx.arc(40, 70, 20, 0, Math.PI * 2);
+    ctx.fillStyle = '#999999';
+    ctx.fill();
+    ctx.stroke();
   }
 
   const player = createPlayer();
   player.position.set(0, getHeight(0, 0) + 0.5, 0);
   scene.add(player);
 
-  scene.add(createShop('잡화상점', 0xffaa00, -5, -5));
-  scene.add(createShop('장비상점', 0x00aaff, 5, -5));
+  scene.add(createShop('잡화상점', 0xffaa00, -5, -5, drawPotionIcon));
+  scene.add(createShop('장비상점', 0x00aaff, 5, -5, drawWeaponIcon));
 
   // Test NPC rendered from a canvas texture
   function createNPC() {
