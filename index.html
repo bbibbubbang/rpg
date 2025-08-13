@@ -441,20 +441,36 @@
       }
     } else if (moving) {
       move.normalize();
-      player.position.x += move.x * speed;
-      player.position.z += move.z * speed;
-      player.position.x = THREE.MathUtils.clamp(player.position.x, -HALF_MAP, HALF_MAP);
-      player.position.z = THREE.MathUtils.clamp(player.position.z, -HALF_MAP, HALF_MAP);
-      facingRight = move.x >= 0;
 
-      walkOffset += 0.2;
-      const angle = Math.sin(walkOffset) * 0.5;
-      player.userData.leftLeg.rotation.x = -angle;
-      player.userData.rightLeg.rotation.x = angle;
-      player.userData.leftArm.rotation.x = angle;
-      player.userData.rightArm.rotation.x = -angle;
+      // Predict next horizontal position
+      const nextX = THREE.MathUtils.clamp(player.position.x + move.x * speed, -HALF_MAP, HALF_MAP);
+      const nextZ = THREE.MathUtils.clamp(player.position.z + move.z * speed, -HALF_MAP, HALF_MAP);
 
-      player.position.y = getHeight(player.position.x, player.position.z) + 0.5;
+      // Determine height at current and next positions
+      const currentY = getHeight(player.position.x, player.position.z) + 0.5;
+      const targetY = getHeight(nextX, nextZ) + 0.5;
+
+      // Allow climbing small height differences only
+      const maxStep = 0.5;
+      if (targetY - currentY <= maxStep) {
+        player.position.set(nextX, targetY, nextZ);
+        facingRight = move.x >= 0;
+
+        walkOffset += 0.2;
+        const angle = Math.sin(walkOffset) * 0.5;
+        player.userData.leftLeg.rotation.x = -angle;
+        player.userData.rightLeg.rotation.x = angle;
+        player.userData.leftArm.rotation.x = angle;
+        player.userData.rightArm.rotation.x = -angle;
+      } else {
+        // Too steep to climb; stay in place
+        facingRight = move.x >= 0;
+        player.userData.leftLeg.rotation.x = 0;
+        player.userData.rightLeg.rotation.x = 0;
+        player.userData.leftArm.rotation.x = 0;
+        player.userData.rightArm.rotation.x = 0;
+        player.position.y = currentY;
+      }
     } else {
       player.userData.leftLeg.rotation.x = 0;
       player.userData.rightLeg.rotation.x = 0;
