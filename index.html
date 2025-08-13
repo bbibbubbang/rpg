@@ -371,7 +371,9 @@
     jumpMove.z += padDir.z;
     if (jumpMove.lengthSq() > 0) {
       jumpMove.normalize().multiplyScalar(speed);
-      facingRight = jumpMove.x >= 0;
+      if (jumpMove.x !== 0) {
+        facingRight = jumpMove.x > 0;
+      }
     }
   }
 
@@ -445,7 +447,9 @@
       player.position.z += move.z * speed;
       player.position.x = THREE.MathUtils.clamp(player.position.x, -HALF_MAP, HALF_MAP);
       player.position.z = THREE.MathUtils.clamp(player.position.z, -HALF_MAP, HALF_MAP);
-      facingRight = move.x >= 0;
+      if (move.x !== 0) {
+        facingRight = move.x > 0;
+      }
 
       walkOffset += 0.2;
       const angle = Math.sin(walkOffset) * 0.5;
