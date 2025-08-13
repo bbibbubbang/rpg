@@ -28,10 +28,25 @@
       background: rgba(0, 0, 0, 0.3);
       border-radius: 50%;
     }
+    #jumpButton {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      width: 80px;
+      height: 80px;
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      line-height: 80px;
+      text-align: center;
+      font-weight: bold;
+      user-select: none;
+      touch-action: none;
+    }
   </style>
 </head>
 <body>
 <div id="joystick"></div>
+<div id="jumpButton">JUMP</div>
 <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
 <script>
   const scene = new THREE.Scene();
@@ -125,15 +140,25 @@
   camera.position.set(0, 10, 20);
   camera.lookAt(player.position);
 
-  const speed = 0.5;
+  const speed = 0.2;
   const keys = {};
-  document.addEventListener('keydown', (e) => { keys[e.key.toLowerCase()] = true; autoMove = false; });
+  const gravity = 0.01;
+  let velocityY = 0;
+  let isJumping = false;
+  const jumpMove = new THREE.Vector3();
+  document.addEventListener('keydown', (e) => {
+    const key = e.key.toLowerCase();
+    keys[key] = true;
+    if (key === ' ') startJump();
+    autoMove = false;
+  });
   document.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
 
   // On-screen joystick
   const joystick = document.getElementById('joystick');
   const padDir = { x: 0, z: 0 };
   let padActive = false;
+  const jumpButton = document.getElementById('jumpButton');
 
   function updatePad(e) {
     const rect = joystick.getBoundingClientRect();
@@ -159,6 +184,26 @@
   joystick.addEventListener('pointerup', resetPad);
   joystick.addEventListener('pointercancel', resetPad);
 
+  function startJump() {
+    if (isJumping) return;
+    isJumping = true;
+    velocityY = 0.2;
+    autoMove = false;
+    jumpMove.set(0, 0, 0);
+    if (keys['a'] || keys['arrowleft']) jumpMove.x -= 1;
+    if (keys['d'] || keys['arrowright']) jumpMove.x += 1;
+    if (keys['w'] || keys['arrowup']) jumpMove.z -= 1;
+    if (keys['s'] || keys['arrowdown']) jumpMove.z += 1;
+    jumpMove.x += padDir.x;
+    jumpMove.z += padDir.z;
+    if (jumpMove.lengthSq() > 0) {
+      jumpMove.normalize().multiplyScalar(speed);
+      facingRight = jumpMove.x >= 0;
+    }
+  }
+
+  jumpButton.addEventListener('pointerdown', startJump);
+
   // Tap to move
   const raycaster = new THREE.Raycaster();
   const tapTarget = new THREE.Vector3();
@@ -180,26 +225,44 @@
 
   function update() {
     const move = new THREE.Vector3();
-    if (keys['a'] || keys['arrowleft']) move.x -= 1;
-    if (keys['d'] || keys['arrowright']) move.x += 1;
-    if (keys['w'] || keys['arrowup']) move.z -= 1;
-    if (keys['s'] || keys['arrowdown']) move.z += 1;
+    if (!isJumping) {
+      if (keys['a'] || keys['arrowleft']) move.x -= 1;
+      if (keys['d'] || keys['arrowright']) move.x += 1;
+      if (keys['w'] || keys['arrowup']) move.z -= 1;
+      if (keys['s'] || keys['arrowdown']) move.z += 1;
 
-    move.x += padDir.x;
-    move.z += padDir.z;
+      move.x += padDir.x;
+      move.z += padDir.z;
 
-    if (autoMove) {
-      const dir = tapTarget.clone().sub(player.position);
-      if (dir.length() < 0.1) {
-        autoMove = false;
-      } else {
-        dir.normalize();
-        move.add(dir);
+      if (autoMove) {
+        const dir = tapTarget.clone().sub(player.position);
+        if (dir.length() < 0.1) {
+          autoMove = false;
+        } else {
+          dir.normalize();
+          move.add(dir);
+        }
       }
     }
 
-    const moving = move.lengthSq() > 0;
-    if (moving) {
+    const moving = isJumping ? jumpMove.lengthSq() > 0 : move.lengthSq() > 0;
+    if (isJumping) {
+      player.position.x += jumpMove.x;
+      player.position.z += jumpMove.z;
+      velocityY -= gravity;
+      player.position.y += velocityY;
+
+      player.userData.leftLeg.rotation.x = 0.5;
+      player.userData.rightLeg.rotation.x = 0.5;
+      player.userData.leftArm.rotation.x = -0.5;
+      player.userData.rightArm.rotation.x = -0.5;
+
+      if (player.position.y <= 0.5) {
+        player.position.y = 0.5;
+        isJumping = false;
+        velocityY = 0;
+      }
+    } else if (moving) {
       move.normalize();
       player.position.x += move.x * speed;
       player.position.z += move.z * speed;
@@ -218,7 +281,7 @@
       player.userData.rightArm.rotation.x = 0;
     }
 
-    player.rotation.y = facingRight ? -Math.PI / 2 : Math.PI / 2;
+    player.rotation.y = facingRight ? -Math.PI / 3 : Math.PI / 3;
 
     camera.position.set(player.position.x, player.position.y + 10, player.position.z + 20);
     camera.lookAt(player.position);
