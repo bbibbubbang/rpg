@@ -124,7 +124,8 @@
   const pos = groundGeometry.attributes.position;
   for (let i = 0; i < pos.count; i++) {
     const x = pos.getX(i);
-    const z = pos.getY(i);
+    // Y coordinates become Z after the ground is rotated, so flip to get world Z
+    const z = -pos.getY(i);
     const y = getHeight(x, z);
     pos.setZ(i, y);
   }
