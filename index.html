@@ -43,6 +43,21 @@
       touch-action: none;
     }
 
+    #attackButton {
+      position: absolute;
+      bottom: 20px;
+      right: 120px;
+      width: 80px;
+      height: 80px;
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      line-height: 80px;
+      text-align: center;
+      font-weight: bold;
+      user-select: none;
+      touch-action: none;
+    }
+
     #debugToggle {
       position: absolute;
       top: 20px;
@@ -78,6 +93,7 @@
 <body>
 <div id="joystick"></div>
 <div id="jumpButton">JUMP</div>
+<div id="attackButton">ATK</div>
 <div id="debugToggle">DEBUG</div>
 <div id="debugPanel">
   <label>Speed <input type="number" id="speedInput" min="0" max="1" step="0.01" value="0.05"></label>
@@ -107,14 +123,13 @@
   scene.add(light);
   scene.add(new THREE.AmbientLight(0xffffff, 0.3));
 
-  // Terrain height function
+  // Terrain height function - flat center, hills on the outskirts
   function getHeight(x, z) {
-    const hx = 15;
-    const hz = 15;
-    const radius = 20;
-    const dist = Math.hypot(x - hx, z - hz);
-    if (dist < radius) {
-      return Math.cos((dist / radius) * Math.PI) * 3;
+    const edgeStart = HALF_MAP - 10;
+    const distEdge = Math.max(Math.abs(x), Math.abs(z));
+    if (distEdge > edgeStart) {
+      const t = (distEdge - edgeStart) / 10;
+      return Math.sin(t * Math.PI / 2) * 5;
     }
     return 0;
   }
@@ -278,7 +293,8 @@
       shop.add(icon);
     }
 
-    shop.position.set(x, 0, z);
+    const groundY = getGroundHeight(x, z);
+    shop.position.set(x, groundY, z);
     return shop;
   }
 
@@ -322,37 +338,6 @@
   scene.add(createShop('잡화상점', 0xffaa00, -5, -5, drawPotionIcon));
   scene.add(createShop('장비상점', 0x00aaff, 5, -5, drawWeaponIcon));
 
-  // Test NPC rendered from a canvas texture
-  function createNPC() {
-    const size = 64;
-    const canvas = document.createElement('canvas');
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext('2d');
-
-    // Face background
-    ctx.fillStyle = '#ffffaa';
-    ctx.fillRect(0, 0, size, size);
-
-    // Eyes
-    ctx.fillStyle = '#000000';
-    ctx.fillRect(16, 20, 8, 8);
-    ctx.fillRect(40, 20, 8, 8);
-
-    // Mouth
-    ctx.fillStyle = '#ff0000';
-    ctx.fillRect(24, 40, 16, 8);
-
-    const texture = new THREE.CanvasTexture(canvas);
-    const material = new THREE.SpriteMaterial({ map: texture, transparent: true });
-    const sprite = new THREE.Sprite(material);
-    sprite.position.set(5, 0.5, 5);
-    sprite.scale.set(2, 2, 1);
-    return sprite;
-  }
-
-  const npc = createNPC();
-  scene.add(npc);
 
   camera.position.set(0, 10, 20);
   camera.lookAt(player.position);
@@ -382,7 +367,6 @@
     const key = e.key.toLowerCase();
     keys[key] = true;
     if (key === ' ') startJump();
-    autoMove = false;
   });
   document.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
 
@@ -391,6 +375,9 @@
   const padDir = { x: 0, z: 0 };
   let padActive = false;
   const jumpButton = document.getElementById('jumpButton');
+  const attackButton = document.getElementById('attackButton');
+  let jumpHeld = false;
+  let attacking = false;
 
   function updatePad(e) {
     const rect = joystick.getBoundingClientRect();
@@ -406,7 +393,6 @@
   joystick.addEventListener('pointerdown', (e) => {
     padActive = true;
     joystick.setPointerCapture(e.pointerId);
-    autoMove = false;
     updatePad(e);
   });
   joystick.addEventListener('pointermove', (e) => {
@@ -420,7 +406,6 @@
     if (isJumping) return;
     isJumping = true;
     velocityY = jumpStrength;
-    autoMove = false;
     jumpMove.set(0, 0, 0);
     if (keys['a'] || keys['arrowleft']) jumpMove.x -= 1;
     if (keys['d'] || keys['arrowright']) jumpMove.x += 1;
@@ -436,28 +421,26 @@
     }
   }
 
-  jumpButton.addEventListener('pointerdown', startJump);
+  jumpButton.addEventListener('pointerdown', () => { jumpHeld = true; startJump(); });
+  jumpButton.addEventListener('pointerup', () => { jumpHeld = false; });
+  jumpButton.addEventListener('pointercancel', () => { jumpHeld = false; });
 
-  // Tap to move
-  const raycaster = new THREE.Raycaster();
-  const tapTarget = new THREE.Vector3();
-  let autoMove = false;
-
-  renderer.domElement.addEventListener('pointerdown', (e) => {
-    if (e.target === joystick) return;
-    const rect = renderer.domElement.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-    const y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-    raycaster.setFromCamera(new THREE.Vector2(x, y), camera);
-    const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-    raycaster.ray.intersectPlane(plane, tapTarget);
-    autoMove = true;
-  });
+  function startAttack() {
+    if (attacking) return;
+    attacking = true;
+    player.userData.rightArm.rotation.x = -1;
+    setTimeout(() => {
+      player.userData.rightArm.rotation.x = 0;
+      attacking = false;
+    }, 200);
+  }
+  attackButton.addEventListener('pointerdown', startAttack);
 
   let walkOffset = 0;
   let facingRight = true;
 
   function update() {
+    if (!isJumping && jumpHeld) startJump();
     const move = new THREE.Vector3();
     if (!isJumping) {
       if (keys['a'] || keys['arrowleft']) move.x -= 1;
@@ -467,16 +450,6 @@
 
       move.x += padDir.x;
       move.z += padDir.z;
-
-      if (autoMove) {
-        const dir = tapTarget.clone().sub(player.position);
-        if (dir.length() < 0.1) {
-          autoMove = false;
-        } else {
-          dir.normalize();
-          move.add(dir);
-        }
-      }
     }
 
     const moving = isJumping ? jumpMove.lengthSq() > 0 : move.lengthSq() > 0;
@@ -528,7 +501,6 @@
         player.userData.leftArm.rotation.x = 0;
         player.userData.rightArm.rotation.x = 0;
         player.position.y = currY;
-        autoMove = false;
       }
     } else {
       player.userData.leftLeg.rotation.x = 0;
