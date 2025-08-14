@@ -107,6 +107,7 @@
   const WALL_THICKNESS = 1;
   const BOUNDARY_MIN = -HALF_MAP + WALL_THICKNESS / 2;
   const BOUNDARY_MAX = HALF_MAP - WALL_THICKNESS / 2;
+  const PLAYER_RADIUS = 0.6;
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x87ceeb);
@@ -172,8 +173,9 @@
   const colliders = [];
 
   function isColliding(pos) {
+    const playerSphere = new THREE.Sphere(pos, PLAYER_RADIUS);
     for (const box of colliders) {
-      if (box.containsPoint(pos)) return true;
+      if (box.intersectsSphere(playerSphere)) return true;
     }
     return false;
   }
