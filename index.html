@@ -123,13 +123,16 @@
   scene.add(light);
   scene.add(new THREE.AmbientLight(0xffffff, 0.3));
 
-  // Terrain height function - flat center, hills on the outskirts
+  // Terrain height function - flat center with irregular hills around the outskirts
   function getHeight(x, z) {
-    const edgeStart = HALF_MAP - 10;
+    const edgeStart = HALF_MAP - 20;
     const distEdge = Math.max(Math.abs(x), Math.abs(z));
     if (distEdge > edgeStart) {
-      const t = (distEdge - edgeStart) / 10;
-      return Math.sin(t * Math.PI / 2) * 5;
+      const t = (distEdge - edgeStart) / 20;
+      const nx = x * 0.2;
+      const nz = z * 0.2;
+      const noise = Math.sin(nx) * Math.cos(nz) + Math.sin(nz * 0.5);
+      return Math.max(0, noise) / 2 * 5 * t;
     }
     return 0;
   }
