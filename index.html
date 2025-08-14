@@ -100,6 +100,7 @@
       user-select:none;
     }
     #statusToggle{left:120px;}
+    #equipmentToggle{left:220px;}
     .panel{
       position:absolute;
       top:60px;
@@ -123,6 +124,11 @@
     }
     .tab-content.active{display:grid;}
     .slot{width:60px;height:60px;border:1px solid #333;}
+    #equipmentPanel{
+      display:grid;
+      grid-template-columns:repeat(4,60px);
+      gap:4px;
+    }
     #statusPanel .stat{margin-bottom:5px;}
     #hpBar,#mpBar{
       width:100%;
@@ -139,6 +145,7 @@
 <body>
 <div id="inventoryToggle" class="ui-button">INV</div>
 <div id="statusToggle" class="ui-button">STAT</div>
+<div id="equipmentToggle" class="ui-button">EQUIP</div>
 <div id="inventoryPanel" class="panel">
   <div class="tabs">
     <button data-tab="equipment">장비</button>
@@ -161,6 +168,21 @@
   <div class="stat">행운: <span id="lukValue"></span></div>
   <div class="stat">물리공격력: <span id="physAtkValue"></span></div>
   <div class="stat">마법공격력: <span id="magAtkValue"></span></div>
+</div>
+<div id="equipmentPanel" class="panel">
+  <div class="slot" data-slot="hat"></div>
+  <div class="slot" data-slot="top"></div>
+  <div class="slot" data-slot="bottom"></div>
+  <div class="slot" data-slot="shoes"></div>
+  <div class="slot" data-slot="gloves"></div>
+  <div class="slot" data-slot="cape"></div>
+  <div class="slot" data-slot="belt"></div>
+  <div class="slot" data-slot="shoulder"></div>
+  <div class="slot" data-slot="ear1"></div>
+  <div class="slot" data-slot="ear2"></div>
+  <div class="slot" data-slot="ring1"></div>
+  <div class="slot" data-slot="ring2"></div>
+  <div class="slot" data-slot="pet"></div>
 </div>
 <div id="joystick"></div>
 <div id="jumpButton">JUMP</div>
@@ -232,8 +254,10 @@
 
   const inventoryToggle = document.getElementById('inventoryToggle');
   const statusToggle = document.getElementById('statusToggle');
+  const equipmentToggle = document.getElementById('equipmentToggle');
   const inventoryPanel = document.getElementById('inventoryPanel');
   const statusPanel = document.getElementById('statusPanel');
+  const equipmentPanel = document.getElementById('equipmentPanel');
   const equipmentTab = document.getElementById('equipmentTab');
   const consumablesTab = document.getElementById('consumablesTab');
   const etcTab = document.getElementById('etcTab');
@@ -246,6 +270,50 @@
     }
   }
   [equipmentTab, consumablesTab, etcTab].forEach(createSlots);
+
+  const inventoryItems = new Array(32).fill(null);
+  inventoryItems[0] = { name: '모자', slot: 'hat' };
+  inventoryItems[1] = { name: '신발', slot: 'shoes' };
+
+  const equipmentSlots = {
+    hat: null, top: null, bottom: null, shoes: null, gloves: null,
+    cape: null, belt: null, shoulder: null, ear1: null, ear2: null,
+    ring1: null, ring2: null, pet: null
+  };
+
+  const inventorySlotDivs = equipmentTab.querySelectorAll('.slot');
+  inventorySlotDivs.forEach((div, idx) => {
+    div.addEventListener('dblclick', () => equipFromInventory(idx));
+  });
+
+  renderInventory();
+  renderEquipment();
+
+  function renderInventory() {
+    inventorySlotDivs.forEach((div, idx) => {
+      const item = inventoryItems[idx];
+      div.textContent = item ? item.name[0] : '';
+    });
+  }
+
+  function renderEquipment() {
+    equipmentPanel.querySelectorAll('.slot').forEach(div => {
+      const key = div.dataset.slot;
+      const item = equipmentSlots[key];
+      div.textContent = item ? item.name[0] : '';
+    });
+  }
+
+  function equipFromInventory(index) {
+    const item = inventoryItems[index];
+    if (!item) return;
+    const slotName = item.slot;
+    const equipped = equipmentSlots[slotName];
+    equipmentSlots[slotName] = item;
+    inventoryItems[index] = equipped || null;
+    renderInventory();
+    renderEquipment();
+  }
 
   function showTab(name) {
     [equipmentTab, consumablesTab, etcTab].forEach(div => div.classList.remove('active'));
@@ -263,8 +331,12 @@
   function toggleStatus() {
     statusPanel.style.display = statusPanel.style.display === 'block' ? 'none' : 'block';
   }
+  function toggleEquipmentPanel() {
+    equipmentPanel.style.display = equipmentPanel.style.display === 'block' ? 'none' : 'block';
+  }
   inventoryToggle.addEventListener('click', toggleInventory);
   statusToggle.addEventListener('click', toggleStatus);
+  equipmentToggle.addEventListener('click', toggleEquipmentPanel);
 
   function updateStatusUI() {
     document.getElementById('levelValue').textContent = stats.level;
