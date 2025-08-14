@@ -138,6 +138,14 @@
   ground.rotation.x = -Math.PI / 2;
   scene.add(ground);
 
+  // Raycaster-based height sampling to match rendered terrain
+  const groundRaycaster = new THREE.Raycaster();
+  function getGroundHeight(x, z) {
+    groundRaycaster.set(new THREE.Vector3(x, 50, z), new THREE.Vector3(0, -1, 0));
+    const hit = groundRaycaster.intersectObject(ground, false);
+    return hit.length > 0 ? hit[0].point.y : 0;
+  }
+
   // Ground grid
   const grid = new THREE.GridHelper(MAP_SIZE, MAP_SIZE / 5, 0x444444, 0x88cc88);
   grid.position.y = 0.01;
@@ -308,7 +316,7 @@
   }
 
   const player = createPlayer();
-  player.position.set(0, getHeight(0, 0) + 0.5, 0);
+  player.position.set(0, getGroundHeight(0, 0) + 0.5, 0);
   scene.add(player);
 
   scene.add(createShop('잡화상점', 0xffaa00, -5, -5, drawPotionIcon));
@@ -480,7 +488,7 @@
       velocityY -= gravity;
       player.position.y += velocityY;
 
-      const groundY = getHeight(player.position.x, player.position.z) + 0.5;
+      const groundY = getGroundHeight(player.position.x, player.position.z) + 0.5;
 
       player.userData.leftLeg.rotation.x = 0.5;
       player.userData.rightLeg.rotation.x = 0.5;
@@ -496,8 +504,8 @@
       move.normalize();
       const nextX = THREE.MathUtils.clamp(player.position.x + move.x * speed, BOUNDARY_MIN, BOUNDARY_MAX);
       const nextZ = THREE.MathUtils.clamp(player.position.z + move.z * speed, BOUNDARY_MIN, BOUNDARY_MAX);
-      const currY = getHeight(player.position.x, player.position.z) + 0.5;
-      const nextY = getHeight(nextX, nextZ) + 0.5;
+      const currY = getGroundHeight(player.position.x, player.position.z) + 0.5;
+      const nextY = getGroundHeight(nextX, nextZ) + 0.5;
 
       const heightDiff = nextY - currY;
       if (Math.abs(heightDiff) <= MAX_STEP) {
@@ -527,7 +535,7 @@
       player.userData.rightLeg.rotation.x = 0;
       player.userData.leftArm.rotation.x = 0;
       player.userData.rightArm.rotation.x = 0;
-      player.position.y = getHeight(player.position.x, player.position.z) + 0.5;
+      player.position.y = getGroundHeight(player.position.x, player.position.z) + 0.5;
     }
 
     player.rotation.y = facingRight ? Math.PI / 3 : -Math.PI / 3;
