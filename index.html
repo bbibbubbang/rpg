@@ -169,6 +169,15 @@
   grid.position.y = 0.01;
   scene.add(grid);
 
+  const colliders = [];
+
+  function isColliding(pos) {
+    for (const box of colliders) {
+      if (box.containsPoint(pos)) return true;
+    }
+    return false;
+  }
+
   // Boundaries to keep player inside the map
   (function addBoundaries() {
     const wallHeight = 3;
@@ -256,11 +265,14 @@
 
   function createShop(name, color, x, z, iconDrawer) {
     const shop = new THREE.Group();
+    const BUILDING_WIDTH = 8;
+    const BUILDING_HEIGHT = 6;
+    const BUILDING_DEPTH = 8;
     const building = new THREE.Mesh(
-      new THREE.BoxGeometry(4, 3, 4),
+      new THREE.BoxGeometry(BUILDING_WIDTH, BUILDING_HEIGHT, BUILDING_DEPTH),
       new THREE.MeshBasicMaterial({ color })
     );
-    building.position.y = 1.5;
+    building.position.y = BUILDING_HEIGHT / 2;
     shop.add(building);
 
     const canvas = document.createElement('canvas');
@@ -278,8 +290,8 @@
     const labelMaterial = new THREE.SpriteMaterial({ map: texture, depthTest: false });
     const label = new THREE.Sprite(labelMaterial);
     label.renderOrder = 1;
-    label.position.set(0, 3, 2.1);
-    label.scale.set(6, 3, 1);
+    label.position.set(0, BUILDING_HEIGHT, BUILDING_DEPTH / 2 + 0.1);
+    label.scale.set(BUILDING_WIDTH + 2, 3, 1);
     shop.add(label);
 
     if (iconDrawer) {
@@ -291,13 +303,16 @@
       const iconTexture = new THREE.CanvasTexture(iconCanvas);
       const iconMaterial = new THREE.SpriteMaterial({ map: iconTexture, depthTest: false, transparent: true });
       const icon = new THREE.Sprite(iconMaterial);
-      icon.position.set(0, 1.5, 2.1);
+      icon.position.set(0, BUILDING_HEIGHT / 2, BUILDING_DEPTH / 2 + 0.1);
       icon.scale.set(2, 2, 1);
       shop.add(icon);
     }
 
     const groundY = getGroundHeight(x, z);
     shop.position.set(x, groundY, z);
+    shop.updateMatrixWorld(true);
+    const bbox = new THREE.Box3().setFromObject(building);
+    colliders.push(bbox);
     return shop;
   }
 
@@ -457,10 +472,14 @@
 
     const moving = isJumping ? jumpMove.lengthSq() > 0 : move.lengthSq() > 0;
     if (isJumping) {
-      player.position.x += jumpMove.x;
-      player.position.z += jumpMove.z;
-      player.position.x = THREE.MathUtils.clamp(player.position.x, BOUNDARY_MIN, BOUNDARY_MAX);
-      player.position.z = THREE.MathUtils.clamp(player.position.z, BOUNDARY_MIN, BOUNDARY_MAX);
+      const prevX = player.position.x;
+      const prevZ = player.position.z;
+      player.position.x = THREE.MathUtils.clamp(player.position.x + jumpMove.x, BOUNDARY_MIN, BOUNDARY_MAX);
+      player.position.z = THREE.MathUtils.clamp(player.position.z + jumpMove.z, BOUNDARY_MIN, BOUNDARY_MAX);
+      if (isColliding(player.position)) {
+        player.position.x = prevX;
+        player.position.z = prevZ;
+      }
       velocityY -= gravity;
       player.position.y += velocityY;
 
@@ -482,9 +501,10 @@
       const nextZ = THREE.MathUtils.clamp(player.position.z + move.z * speed, BOUNDARY_MIN, BOUNDARY_MAX);
       const currY = getGroundHeight(player.position.x, player.position.z) + 0.5;
       const nextY = getGroundHeight(nextX, nextZ) + 0.5;
+      const nextPos = new THREE.Vector3(nextX, nextY, nextZ);
 
       const heightDiff = nextY - currY;
-      if (Math.abs(heightDiff) <= MAX_STEP) {
+      if (Math.abs(heightDiff) <= MAX_STEP && !isColliding(nextPos)) {
         player.position.x = nextX;
         player.position.z = nextZ;
         player.position.y = nextY;
