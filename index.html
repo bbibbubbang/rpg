@@ -117,28 +117,28 @@
     .tabs button{flex:1;padding:5px;cursor:pointer;}
     .tab-content{
       display:none;
-      grid-template-columns:repeat(4,1fr);
+      grid-template-columns:repeat(4,32px);
       gap:4px;
       max-height:320px;
       overflow-y:auto;
     }
     .tab-content.active{display:grid;}
     .slot{
-      width:60px;
-      height:60px;
+      width:32px;
+      height:32px;
       border:1px solid #333;
       display:flex;
       align-items:center;
       justify-content:center;
-      font-size:32px;
+      font-size:24px;
     }
     .slot:empty::before{
       opacity:0.3;
       filter:grayscale(100%);
     }
     #equipmentPanel{
-      grid-template-columns:repeat(3,60px);
-      grid-template-rows:repeat(5,60px);
+      grid-template-columns:repeat(3,32px);
+      grid-template-rows:repeat(5,32px);
       gap:4px;
       justify-content:center;
     }
@@ -325,6 +325,11 @@
     div.addEventListener('dblclick', () => equipFromInventory(idx));
   });
 
+  const equipmentSlotDivs = equipmentPanel.querySelectorAll('.slot');
+  equipmentSlotDivs.forEach(div => {
+    div.addEventListener('dblclick', () => unequipToInventory(div.dataset.slot));
+  });
+
   renderInventory();
   renderEquipment();
 
@@ -350,6 +355,20 @@
     const equipped = equipmentSlots[slotName];
     equipmentSlots[slotName] = item;
     inventoryItems[index] = equipped || null;
+    renderInventory();
+    renderEquipment();
+  }
+
+  function unequipToInventory(slotName) {
+    const item = equipmentSlots[slotName];
+    if (!item) return;
+    const emptyIndex = inventoryItems.findIndex(i => i === null);
+    if (emptyIndex === -1) {
+      alert('인벤토리가 가득 찼습니다.');
+      return;
+    }
+    inventoryItems[emptyIndex] = item;
+    equipmentSlots[slotName] = null;
     renderInventory();
     renderEquipment();
   }
