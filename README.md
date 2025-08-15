@@ -12,3 +12,5 @@ This repository contains simple movement demos implemented with HTML5 and JavaSc
 
 - Arrow keys or `W`, `A`, `S`, `D`: Move the player.
 - `q`: Quit the game in environments that support it.
+- `1`, `2`, `3`: Switch between sword, bow, and staff.
+- On-screen attack button: Perform an attack with the equipped weapon.

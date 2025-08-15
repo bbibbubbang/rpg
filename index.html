@@ -101,6 +101,9 @@
     }
     #statusToggle{left:120px;}
     #equipmentToggle{left:220px;}
+    #weaponSword{left:320px;}
+    #weaponBow{left:420px;}
+    #weaponStaff{left:520px;}
     .panel{
       position:absolute;
       top:60px;
@@ -185,6 +188,9 @@
 <div id="inventoryToggle" class="ui-button">INV</div>
 <div id="statusToggle" class="ui-button">STAT</div>
 <div id="equipmentToggle" class="ui-button">EQUIP</div>
+<div id="weaponSword" class="ui-button">SWD</div>
+<div id="weaponBow" class="ui-button">BOW</div>
+<div id="weaponStaff" class="ui-button">STF</div>
 <div id="inventoryPanel" class="panel">
   <div class="tabs">
     <button data-tab="equipment">장비</button>
@@ -465,10 +471,10 @@
 
   const colliders = [];
 
-  function isColliding(pos) {
-    const playerSphere = new THREE.Sphere(pos, PLAYER_RADIUS);
+  function isColliding(pos, radius = PLAYER_RADIUS) {
+    const sphere = new THREE.Sphere(pos, radius);
     for (const box of colliders) {
-      if (box.intersectsSphere(playerSphere)) return true;
+      if (box.intersectsSphere(sphere)) return true;
     }
     return false;
   }
@@ -651,6 +657,17 @@
   scene.add(createShop('잡화상점', 0xffaa00, -5, -5, drawPotionIcon));
   scene.add(createShop('장비상점', 0x00aaff, 5, -5, drawWeaponIcon));
 
+  const monsters = [];
+  function spawnMonster(x, z) {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.6), new THREE.MeshBasicMaterial({ color: 0xff0000 }));
+    m.position.set(x, getGroundHeight(x, z) + 0.3, z);
+    scene.add(m);
+    monsters.push(m);
+  }
+  spawnMonster(5, 5);
+  spawnMonster(-5, 5);
+  spawnMonster(0, -5);
+
 
   camera.position.set(0, 10, 20);
   camera.lookAt(player.position);
@@ -683,6 +700,9 @@
     if (key === 'i') toggleInventory();
     if (key === 'p') toggleStatus();
     if (key === 'l') levelUp();
+    if (key === '1') setWeapon('sword');
+    if (key === '2') setWeapon('bow');
+    if (key === '3') setWeapon('staff');
   });
   document.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
 
@@ -692,8 +712,66 @@
   let padActive = false;
   const jumpButton = document.getElementById('jumpButton');
   const attackButton = document.getElementById('attackButton');
+  const weaponSword = document.getElementById('weaponSword');
+  const weaponBow = document.getElementById('weaponBow');
+  const weaponStaff = document.getElementById('weaponStaff');
   let jumpHeld = false;
   let attacking = false;
+
+  const weaponConfig = {
+    sword: { detect: 3, range: 1.5 },
+    bow: { detect: 10, speed: 0.3, radius: 0.1 },
+    staff: { detect: 8 }
+  };
+  const projectiles = [];
+
+  let currentWeapon = 'sword';
+  function setWeapon(type) {
+    currentWeapon = type;
+    attackButton.textContent = type.toUpperCase();
+  }
+  setWeapon('sword');
+
+  weaponSword.addEventListener('click', () => setWeapon('sword'));
+  weaponBow.addEventListener('click', () => setWeapon('bow'));
+  weaponStaff.addEventListener('click', () => setWeapon('staff'));
+
+  function getNearestMonster(range) {
+    let nearest = null;
+    let minDist = Infinity;
+    for (const m of monsters) {
+      const dist = player.position.distanceTo(m.position);
+      if (dist < range && dist < minDist) {
+        nearest = m;
+        minDist = dist;
+      }
+    }
+    return nearest;
+  }
+
+  function damageMonster(monster) {
+    scene.remove(monster);
+    const idx = monsters.indexOf(monster);
+    if (idx >= 0) monsters.splice(idx, 1);
+  }
+
+  function fireArrow(target) {
+    const arrow = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.5), new THREE.MeshBasicMaterial({ color: 0x888888 }));
+    arrow.position.copy(player.position);
+    arrow.position.y += 0.5;
+    const dir = new THREE.Vector3().subVectors(target.position, arrow.position).normalize();
+    arrow.userData = { dir, target };
+    scene.add(arrow);
+    projectiles.push(arrow);
+  }
+
+  function castMagic(target) {
+    const effect = new THREE.Mesh(new THREE.SphereGeometry(0.3, 8, 8), new THREE.MeshBasicMaterial({ color: 0x00ffff }));
+    effect.position.copy(target.position);
+    scene.add(effect);
+    setTimeout(() => { scene.remove(effect); }, 300);
+    damageMonster(target);
+  }
 
   function updatePad(e) {
     const rect = joystick.getBoundingClientRect();
@@ -743,12 +821,34 @@
 
   function startAttack() {
     if (attacking) return;
+    const cfg = weaponConfig[currentWeapon];
+    const target = getNearestMonster(cfg.detect);
+    if (!target) return;
     attacking = true;
-    player.userData.rightArm.rotation.x = -1;
-    setTimeout(() => {
-      player.userData.rightArm.rotation.x = 0;
-      attacking = false;
-    }, 200);
+    if (currentWeapon === 'sword') {
+      player.userData.rightArm.rotation.x = -1;
+      if (player.position.distanceTo(target.position) <= cfg.range) {
+        damageMonster(target);
+      }
+      setTimeout(() => {
+        player.userData.rightArm.rotation.x = 0;
+        attacking = false;
+      }, 200);
+    } else if (currentWeapon === 'bow') {
+      player.userData.rightArm.rotation.x = -0.5;
+      fireArrow(target);
+      setTimeout(() => {
+        player.userData.rightArm.rotation.x = 0;
+        attacking = false;
+      }, 200);
+    } else if (currentWeapon === 'staff') {
+      player.userData.rightArm.rotation.x = -1;
+      castMagic(target);
+      setTimeout(() => {
+        player.userData.rightArm.rotation.x = 0;
+        attacking = false;
+      }, 200);
+    }
   }
   attackButton.addEventListener('pointerdown', startAttack);
 
@@ -829,6 +929,26 @@
       player.userData.leftArm.rotation.x = 0;
       player.userData.rightArm.rotation.x = 0;
       player.position.y = getGroundHeight(player.position.x, player.position.z) + 0.5;
+    }
+
+    for (let i = projectiles.length - 1; i >= 0; i--) {
+      const p = projectiles[i];
+      p.position.add(p.userData.dir.clone().multiplyScalar(weaponConfig.bow.speed));
+      if (isColliding(p.position, weaponConfig.bow.radius)) {
+        scene.remove(p);
+        projectiles.splice(i, 1);
+        continue;
+      }
+      if (!monsters.includes(p.userData.target)) {
+        scene.remove(p);
+        projectiles.splice(i, 1);
+        continue;
+      }
+      if (p.position.distanceTo(p.userData.target.position) < weaponConfig.bow.radius * 2) {
+        damageMonster(p.userData.target);
+        scene.remove(p);
+        projectiles.splice(i, 1);
+      }
     }
 
     player.rotation.y = facingRight ? Math.PI / 3 : -Math.PI / 3;
