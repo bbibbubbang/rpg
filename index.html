@@ -157,6 +157,7 @@
     .slot[data-slot="belt"]{grid-row:4;grid-column:1;}
     .slot[data-slot="bottom"]{grid-row:4;grid-column:2;}
     .slot[data-slot="pet"]{grid-row:4;grid-column:3;}
+    .slot[data-slot="weapon"]{grid-row:5;grid-column:1;}
     .slot[data-slot="shoes"]{grid-row:5;grid-column:2;}
     .slot[data-slot="hat"]:empty::before{content:'🎩';}
     .slot[data-slot="top"]:empty::before{content:'👕';}
@@ -171,6 +172,7 @@
     .slot[data-slot="ring1"]:empty::before{content:'💍';}
     .slot[data-slot="ring2"]:empty::before{content:'💍';}
     .slot[data-slot="pet"]:empty::before{content:'🐶';}
+    .slot[data-slot="weapon"]:empty::before{content:'⚔️';}
     #statusPanel .stat{margin-bottom:5px;}
     #hpBar,#mpBar{
       width:100%;
@@ -228,6 +230,7 @@
   <div class="slot" data-slot="ring1"></div>
   <div class="slot" data-slot="ring2"></div>
   <div class="slot" data-slot="pet"></div>
+  <div class="slot" data-slot="weapon"></div>
 </div>
 <div id="joystick"></div>
 <div id="jumpButton">JUMP</div>
@@ -317,10 +320,13 @@
   [equipmentTab, consumablesTab, etcTab].forEach(createSlots);
 
   const inventoryItems = new Array(32).fill(null);
-  inventoryItems[0] = { name: '모자', slot: 'hat' };
-  inventoryItems[1] = { name: '신발', slot: 'shoes' };
+  inventoryItems[0] = { name: '활', slot: 'weapon', type: 'bow' };
+  inventoryItems[1] = { name: '지팡이', slot: 'weapon', type: 'staff' };
+  inventoryItems[2] = { name: '모자', slot: 'hat' };
+  inventoryItems[3] = { name: '신발', slot: 'shoes' };
 
   const equipmentSlots = {
+    weapon: { name: '검', slot: 'weapon', type: 'sword' },
     hat: null, top: null, bottom: null, shoes: null, gloves: null,
     cape: null, belt: null, shoulder: null, ear1: null, ear2: null,
     ring1: null, ring2: null, pet: null
@@ -363,6 +369,9 @@
     inventoryItems[index] = equipped || null;
     renderInventory();
     renderEquipment();
+    if (slotName === 'weapon') {
+      setWeapon(item.type);
+    }
   }
 
   function unequipToInventory(slotName) {
@@ -377,6 +386,9 @@
     equipmentSlots[slotName] = null;
     renderInventory();
     renderEquipment();
+    if (slotName === 'weapon') {
+      setWeapon('sword');
+    }
   }
 
   function showTab(name) {
