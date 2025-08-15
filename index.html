@@ -132,8 +132,11 @@
       justify-content:center;
       font-size:32px;
     }
+    .slot:empty::before{
+      opacity:0.3;
+      filter:grayscale(100%);
+    }
     #equipmentPanel{
-      display:grid;
       grid-template-columns:repeat(3,60px);
       grid-template-rows:repeat(5,60px);
       gap:4px;
@@ -152,19 +155,19 @@
     .slot[data-slot="bottom"]{grid-row:4;grid-column:2;}
     .slot[data-slot="pet"]{grid-row:4;grid-column:3;}
     .slot[data-slot="shoes"]{grid-row:5;grid-column:2;}
-    .slot[data-slot="hat"]::before{content:'🎩';}
-    .slot[data-slot="top"]::before{content:'👕';}
-    .slot[data-slot="bottom"]::before{content:'👖';}
-    .slot[data-slot="shoes"]::before{content:'👟';}
-    .slot[data-slot="gloves"]::before{content:'🧤';}
-    .slot[data-slot="cape"]::before{content:'🦺';}
-    .slot[data-slot="belt"]::before{content:'🧷';}
-    .slot[data-slot="shoulder"]::before{content:'🛡️';}
-    .slot[data-slot="ear1"]::before{content:'👂';}
-    .slot[data-slot="ear2"]::before{content:'👂';}
-    .slot[data-slot="ring1"]::before{content:'💍';}
-    .slot[data-slot="ring2"]::before{content:'💍';}
-    .slot[data-slot="pet"]::before{content:'🐶';}
+    .slot[data-slot="hat"]:empty::before{content:'🎩';}
+    .slot[data-slot="top"]:empty::before{content:'👕';}
+    .slot[data-slot="bottom"]:empty::before{content:'👖';}
+    .slot[data-slot="shoes"]:empty::before{content:'👟';}
+    .slot[data-slot="gloves"]:empty::before{content:'🧤';}
+    .slot[data-slot="cape"]:empty::before{content:'🦺';}
+    .slot[data-slot="belt"]:empty::before{content:'🧷';}
+    .slot[data-slot="shoulder"]:empty::before{content:'🛡️';}
+    .slot[data-slot="ear1"]:empty::before{content:'👂';}
+    .slot[data-slot="ear2"]:empty::before{content:'👂';}
+    .slot[data-slot="ring1"]:empty::before{content:'💍';}
+    .slot[data-slot="ring2"]:empty::before{content:'💍';}
+    .slot[data-slot="pet"]:empty::before{content:'🐶';}
     #statusPanel .stat{margin-bottom:5px;}
     #hpBar,#mpBar{
       width:100%;
@@ -368,7 +371,7 @@
     statusPanel.style.display = statusPanel.style.display === 'block' ? 'none' : 'block';
   }
   function toggleEquipmentPanel() {
-    equipmentPanel.style.display = equipmentPanel.style.display === 'block' ? 'none' : 'block';
+    equipmentPanel.style.display = equipmentPanel.style.display === 'grid' ? 'none' : 'grid';
   }
   inventoryToggle.addEventListener('click', toggleInventory);
   statusToggle.addEventListener('click', toggleStatus);
