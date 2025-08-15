@@ -670,15 +670,18 @@
   scene.add(createShop('장비상점', 0x00aaff, 5, -5, drawWeaponIcon));
 
   const monsters = [];
-  function spawnMonster(x, z) {
-    const m = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.6), new THREE.MeshBasicMaterial({ color: 0xff0000 }));
+  function spawnMonster(x, z, hp = 1) {
+    const m = new THREE.Mesh(
+      new THREE.BoxGeometry(0.6, 0.6, 0.6),
+      new THREE.MeshBasicMaterial({ color: 0xff0000 })
+    );
     m.position.set(x, getGroundHeight(x, z) + 0.3, z);
+    m.userData.hp = hp;
     scene.add(m);
     monsters.push(m);
   }
-  spawnMonster(5, 5);
-  spawnMonster(-5, 5);
-  spawnMonster(0, -5);
+  // Dummy monster placed away from buildings with infinite health
+  spawnMonster(10, 10, Infinity);
 
 
   camera.position.set(0, 10, 20);
@@ -762,9 +765,13 @@
   }
 
   function damageMonster(monster) {
-    scene.remove(monster);
-    const idx = monsters.indexOf(monster);
-    if (idx >= 0) monsters.splice(idx, 1);
+    if (monster.userData.hp === Infinity) return;
+    monster.userData.hp -= 1;
+    if (monster.userData.hp <= 0) {
+      scene.remove(monster);
+      const idx = monsters.indexOf(monster);
+      if (idx >= 0) monsters.splice(idx, 1);
+    }
   }
 
   function fireArrow(target) {
