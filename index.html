@@ -732,6 +732,7 @@
   const weaponStaff = document.getElementById('weaponStaff');
   let jumpHeld = false;
   let attacking = false;
+  let attackHeld = false;
 
   const weaponConfig = {
     sword: { detect: 3, range: 1.5 },
@@ -869,12 +870,15 @@
       }, 200);
     }
   }
-  attackButton.addEventListener('pointerdown', startAttack);
+  attackButton.addEventListener('pointerdown', () => { attackHeld = true; startAttack(); });
+  attackButton.addEventListener('pointerup', () => { attackHeld = false; });
+  attackButton.addEventListener('pointercancel', () => { attackHeld = false; });
 
   let walkOffset = 0;
   let facingRight = true;
 
   function update() {
+    if (attackHeld && !attacking) startAttack();
     if (!isJumping && jumpHeld) startJump();
     const move = new THREE.Vector3();
     if (!isJumping) {
@@ -905,7 +909,7 @@
       player.userData.leftLeg.rotation.x = 0.5;
       player.userData.rightLeg.rotation.x = 0.5;
       player.userData.leftArm.rotation.x = -0.5;
-      player.userData.rightArm.rotation.x = -0.5;
+      if (!attacking) player.userData.rightArm.rotation.x = -0.5;
 
       if (player.position.y <= groundY) {
         player.position.y = groundY;
@@ -934,19 +938,19 @@
         player.userData.leftLeg.rotation.x = -angle;
         player.userData.rightLeg.rotation.x = angle;
         player.userData.leftArm.rotation.x = angle;
-        player.userData.rightArm.rotation.x = -angle;
+        if (!attacking) player.userData.rightArm.rotation.x = -angle;
       } else {
         player.userData.leftLeg.rotation.x = 0;
         player.userData.rightLeg.rotation.x = 0;
         player.userData.leftArm.rotation.x = 0;
-        player.userData.rightArm.rotation.x = 0;
+        if (!attacking) player.userData.rightArm.rotation.x = 0;
         player.position.y = currY;
       }
     } else {
       player.userData.leftLeg.rotation.x = 0;
       player.userData.rightLeg.rotation.x = 0;
       player.userData.leftArm.rotation.x = 0;
-      player.userData.rightArm.rotation.x = 0;
+      if (!attacking) player.userData.rightArm.rotation.x = 0;
       player.position.y = getGroundHeight(player.position.x, player.position.z) + 0.5;
     }
 
