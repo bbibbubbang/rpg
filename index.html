@@ -775,6 +775,19 @@
     }
   }
 
+  function swingSword(target) {
+    const swing = new THREE.Mesh(
+      new THREE.BoxGeometry(1, 0.1, 0.3),
+      new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.7 })
+    );
+    swing.position.copy(player.position);
+    swing.position.y += 0.5;
+    swing.lookAt(target.position);
+    swing.position.lerp(target.position, 0.5);
+    scene.add(swing);
+    setTimeout(() => { scene.remove(swing); }, 200);
+  }
+
   function fireArrow(target) {
     const arrow = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 0.5), new THREE.MeshBasicMaterial({ color: 0x888888 }));
     arrow.position.copy(player.position);
@@ -786,10 +799,37 @@
   }
 
   function castMagic(target) {
-    const effect = new THREE.Mesh(new THREE.SphereGeometry(0.3, 8, 8), new THREE.MeshBasicMaterial({ color: 0x00ffff }));
-    effect.position.copy(target.position);
-    scene.add(effect);
-    setTimeout(() => { scene.remove(effect); }, 300);
+    const circle = new THREE.Mesh(
+      new THREE.RingGeometry(0.3, 0.6, 32),
+      new THREE.MeshBasicMaterial({ color: 0x00ffff, side: THREE.DoubleSide, transparent: true, opacity: 0.8 })
+    );
+    circle.rotation.x = -Math.PI / 2;
+    circle.position.set(
+      target.position.x,
+      getGroundHeight(target.position.x, target.position.z) + 0.01,
+      target.position.z
+    );
+    scene.add(circle);
+
+    const gas = new THREE.Mesh(
+      new THREE.SphereGeometry(0.2, 8, 8),
+      new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0.6 })
+    );
+    gas.position.copy(target.position);
+    scene.add(gas);
+    const steps = 5;
+    for (let i = 1; i <= steps; i++) {
+      setTimeout(() => {
+        const scale = 1 + i * 0.3;
+        gas.scale.set(scale, scale, scale);
+        gas.material.opacity = 0.6 - i * 0.1;
+      }, i * 60);
+    }
+    setTimeout(() => {
+      scene.remove(circle);
+      scene.remove(gas);
+    }, (steps + 1) * 60);
+
     damageMonster(target);
   }
 
@@ -847,6 +887,7 @@
     attacking = true;
     if (currentWeapon === 'sword') {
       player.userData.rightArm.rotation.x = -1;
+      swingSword(target);
       if (player.position.distanceTo(target.position) <= cfg.range) {
         damageMonster(target);
       }
