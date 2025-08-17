@@ -735,7 +735,7 @@
   let attackHeld = false;
 
   const weaponConfig = {
-    sword: { detect: 3, range: 1.5 },
+    sword: { detect: 2.5, range: 2.5 },
     bow: { detect: 10, speed: 0.3, radius: 0.1 },
     staff: { detect: 8 }
   };
@@ -897,7 +897,8 @@
   function startAttack() {
     if (attacking) return;
     const cfg = weaponConfig[currentWeapon];
-    const target = getNearestMonster(cfg.detect);
+    const detectRange = cfg.range || cfg.detect;
+    const target = getNearestMonster(detectRange);
     if (!target) return;
     attacking = true;
     if (currentWeapon === 'sword') {
