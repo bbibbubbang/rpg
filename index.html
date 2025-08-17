@@ -735,7 +735,7 @@
   let attackHeld = false;
 
   const weaponConfig = {
-    sword: { detect: 2.5, range: 2.5 },
+    sword: { detect: 7.5, range: 7.5 },
     bow: { detect: 10, speed: 0.3, radius: 0.1 },
     staff: { detect: 8 }
   };
@@ -757,7 +757,7 @@
     let minDist = Infinity;
     for (const m of monsters) {
       const dist = player.position.distanceTo(m.position);
-      if (dist < range && dist < minDist) {
+      if (dist <= range && dist < minDist) {
         nearest = m;
         minDist = dist;
       }
@@ -776,8 +776,9 @@
   }
 
   function swingSword(target) {
+    const range = weaponConfig.sword.range;
     const arc = new THREE.Mesh(
-      new THREE.RingGeometry(0.3, 0.8, 32, 1, Math.PI / 2, Math.PI / 2),
+      new THREE.RingGeometry(range * 0.12, range * 0.32, 32, 1, Math.PI / 2, Math.PI / 2),
       new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8, side: THREE.DoubleSide })
     );
     arc.rotation.order = 'YXZ';
@@ -897,16 +898,15 @@
   function startAttack() {
     if (attacking) return;
     const cfg = weaponConfig[currentWeapon];
-    const detectRange = cfg.range || cfg.detect;
+    const detectRange = currentWeapon === 'sword' ? cfg.range : (cfg.range || cfg.detect);
     const target = getNearestMonster(detectRange);
     if (!target) return;
+    if (currentWeapon === 'sword' && player.position.distanceTo(target.position) > cfg.range) return;
     attacking = true;
     if (currentWeapon === 'sword') {
       player.userData.rightArm.rotation.x = -1;
       swingSword(target);
-      if (player.position.distanceTo(target.position) <= cfg.range) {
-        damageMonster(target);
-      }
+      damageMonster(target);
       setTimeout(() => {
         player.userData.rightArm.rotation.x = 0;
         attacking = false;
