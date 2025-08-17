@@ -776,16 +776,30 @@
   }
 
   function swingSword(target) {
-    const swing = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 0.1, 0.3),
-      new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.7 })
+    const arc = new THREE.Mesh(
+      new THREE.RingGeometry(0.3, 0.8, 32, 1, Math.PI / 2, Math.PI / 2),
+      new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8, side: THREE.DoubleSide })
     );
-    swing.position.copy(player.position);
-    swing.position.y += 0.5;
-    swing.lookAt(target.position);
-    swing.position.lerp(target.position, 0.5);
-    scene.add(swing);
-    setTimeout(() => { scene.remove(swing); }, 200);
+    arc.position.copy(player.position);
+    arc.position.y += 0.5;
+    const angle = Math.atan2(target.position.x - player.position.x, target.position.z - player.position.z);
+    arc.rotation.y = angle;
+    arc.rotation.x = Math.PI / 2;
+    arc.rotation.z = -Math.PI / 2;
+    scene.add(arc);
+    const start = performance.now();
+    function animateSlash(now) {
+      const elapsed = now - start;
+      const t = elapsed / 200;
+      arc.material.opacity = 0.8 * (1 - t);
+      arc.rotation.z = -Math.PI / 2 + Math.PI * t;
+      if (elapsed < 200) {
+        requestAnimationFrame(animateSlash);
+      } else {
+        scene.remove(arc);
+      }
+    }
+    requestAnimationFrame(animateSlash);
   }
 
   function fireArrow(target) {
