@@ -670,6 +670,7 @@
   scene.add(createShop('장비상점', 0x00aaff, 5, -5, drawWeaponIcon));
 
   const monsters = [];
+  const MONSTER_RADIUS = 0.3;
   function spawnMonster(x, z, hp = 1) {
     const m = new THREE.Mesh(
       new THREE.BoxGeometry(0.6, 0.6, 0.6),
@@ -677,6 +678,7 @@
     );
     m.position.set(x, getGroundHeight(x, z) + 0.3, z);
     m.userData.hp = hp;
+    m.userData.radius = MONSTER_RADIUS;
     scene.add(m);
     monsters.push(m);
   }
@@ -735,7 +737,7 @@
   let attackHeld = false;
 
   const weaponConfig = {
-    sword: { detect: 7.5, range: 7.5 },
+    sword: { detect: 3, range: 1.5 },
     bow: { detect: 10, speed: 0.3, radius: 0.1 },
     staff: { detect: 8 }
   };
@@ -756,7 +758,7 @@
     let nearest = null;
     let minDist = Infinity;
     for (const m of monsters) {
-      const dist = player.position.distanceTo(m.position);
+      const dist = player.position.distanceTo(m.position) - (m.userData.radius || 0);
       if (dist <= range && dist < minDist) {
         nearest = m;
         minDist = dist;
@@ -901,7 +903,11 @@
     const detectRange = currentWeapon === 'sword' ? cfg.range : (cfg.range || cfg.detect);
     const target = getNearestMonster(detectRange);
     if (!target) return;
-    if (currentWeapon === 'sword' && player.position.distanceTo(target.position) > cfg.range) return;
+    if (
+      currentWeapon === 'sword' &&
+      player.position.distanceTo(target.position) - (target.userData.radius || 0) > cfg.range
+    )
+      return;
     attacking = true;
     if (currentWeapon === 'sword') {
       player.userData.rightArm.rotation.x = -1;
