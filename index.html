@@ -249,6 +249,7 @@
   const BOUNDARY_MIN = -HALF_MAP + WALL_THICKNESS / 2;
   const BOUNDARY_MAX = HALF_MAP - WALL_THICKNESS / 2;
   const PLAYER_RADIUS = 0.6;
+  const MONSTER_RADIUS = 0.3;
 
   const stats = {
     level: 1,
@@ -677,6 +678,7 @@
     );
     m.position.set(x, getGroundHeight(x, z) + 0.3, z);
     m.userData.hp = hp;
+    m.userData.radius = MONSTER_RADIUS;
     scene.add(m);
     monsters.push(m);
   }
@@ -735,7 +737,7 @@
   let attackHeld = false;
 
   const weaponConfig = {
-    sword: { detect: 7.5, range: 7.5 },
+    sword: { detect: 0.8, range: 0.8 },
     bow: { detect: 10, speed: 0.3, radius: 0.1 },
     staff: { detect: 8 }
   };
@@ -752,11 +754,12 @@
   weaponBow.addEventListener('click', () => setWeapon('bow'));
   weaponStaff.addEventListener('click', () => setWeapon('staff'));
 
-  function getNearestMonster(range) {
+  function getNearestMonster(range, includeRadius = false) {
     let nearest = null;
     let minDist = Infinity;
     for (const m of monsters) {
-      const dist = player.position.distanceTo(m.position);
+      let dist = player.position.distanceTo(m.position);
+      if (includeRadius) dist -= (m.userData.radius || MONSTER_RADIUS);
       if (dist <= range && dist < minDist) {
         nearest = m;
         minDist = dist;
@@ -778,7 +781,7 @@
   function swingSword(target) {
     const range = weaponConfig.sword.range;
     const arc = new THREE.Mesh(
-      new THREE.RingGeometry(range * 0.12, range * 0.32, 32, 1, Math.PI / 2, Math.PI / 2),
+      new THREE.RingGeometry(range * 0.375, range, 32, 1, Math.PI / 2, Math.PI / 2),
       new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8, side: THREE.DoubleSide })
     );
     arc.rotation.order = 'YXZ';
@@ -899,9 +902,9 @@
     if (attacking) return;
     const cfg = weaponConfig[currentWeapon];
     const detectRange = currentWeapon === 'sword' ? cfg.range : (cfg.range || cfg.detect);
-    const target = getNearestMonster(detectRange);
+    const target = getNearestMonster(detectRange, currentWeapon === 'sword');
     if (!target) return;
-    if (currentWeapon === 'sword' && player.position.distanceTo(target.position) > cfg.range) return;
+    if (currentWeapon === 'sword' && player.position.distanceTo(target.position) - (target.userData.radius || MONSTER_RADIUS) > cfg.range) return;
     attacking = true;
     if (currentWeapon === 'sword') {
       player.userData.rightArm.rotation.x = -1;
