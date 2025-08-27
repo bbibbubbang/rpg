@@ -14,3 +14,8 @@ This repository contains simple movement demos implemented with HTML5 and JavaSc
 - `q`: Quit the game in environments that support it.
 - `1`, `2`, `3`: Switch between sword, bow, and staff.
 - On-screen attack button: Perform an attack with the equipped weapon.
+
+## Item Database
+
+Item stats are loaded from an `items.xlsx` Excel spreadsheet. This file is not included in the repository; create your own spreadsheet with the expected columns to populate the inventory.
+

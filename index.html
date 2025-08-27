@@ -104,6 +104,7 @@
     #weaponSword{left:320px;}
     #weaponBow{left:420px;}
     #weaponStaff{left:520px;}
+    #fullscreenToggle{left:620px;}
     .panel{
       position:absolute;
       top:60px;
@@ -115,7 +116,19 @@
       max-height:80vh;
       overflow-y:auto;
     }
-    #inventoryPanel{width:300px;}
+    #inventoryPanel{
+      width:500px;
+      display:flex;
+    }
+    #inventoryGrid{flex:1;}
+    #itemDetails{
+      width:180px;
+      margin-left:10px;
+      border-left:1px solid #333;
+      padding-left:10px;
+      display:none;
+    }
+    #itemDetails img{width:64px;height:64px;}
     .tabs{display:flex;margin-bottom:5px;}
     .tabs button{flex:1;padding:5px;cursor:pointer;}
     .tab-content{
@@ -185,6 +198,7 @@
     #hpBar div{height:100%;background:red;width:100%;}
     #mpBar div{height:100%;background:blue;width:100%;}
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
 <div id="inventoryToggle" class="ui-button">INV</div>
@@ -193,15 +207,19 @@
 <div id="weaponSword" class="ui-button">SWD</div>
 <div id="weaponBow" class="ui-button">BOW</div>
 <div id="weaponStaff" class="ui-button">STF</div>
+<div id="fullscreenToggle" class="ui-button">FULL</div>
 <div id="inventoryPanel" class="panel">
-  <div class="tabs">
-    <button data-tab="equipment">장비</button>
-    <button data-tab="consumables">소비</button>
-    <button data-tab="etc">기타</button>
+  <div id="inventoryGrid">
+    <div class="tabs">
+      <button data-tab="equipment">장비</button>
+      <button data-tab="consumables">소비</button>
+      <button data-tab="etc">기타</button>
+    </div>
+    <div id="equipmentTab" class="tab-content"></div>
+    <div id="consumablesTab" class="tab-content"></div>
+    <div id="etcTab" class="tab-content"></div>
   </div>
-  <div id="equipmentTab" class="tab-content"></div>
-  <div id="consumablesTab" class="tab-content"></div>
-  <div id="etcTab" class="tab-content"></div>
+  <div id="itemDetails"></div>
 </div>
 <div id="statusPanel" class="panel">
   <div class="stat">레벨: <span id="levelValue"></span></div>
@@ -303,12 +321,14 @@
   const inventoryToggle = document.getElementById('inventoryToggle');
   const statusToggle = document.getElementById('statusToggle');
   const equipmentToggle = document.getElementById('equipmentToggle');
+  const fullscreenToggle = document.getElementById('fullscreenToggle');
   const inventoryPanel = document.getElementById('inventoryPanel');
   const statusPanel = document.getElementById('statusPanel');
   const equipmentPanel = document.getElementById('equipmentPanel');
   const equipmentTab = document.getElementById('equipmentTab');
   const consumablesTab = document.getElementById('consumablesTab');
   const etcTab = document.getElementById('etcTab');
+  const itemDetails = document.getElementById('itemDetails');
 
   function createSlots(container) {
     for (let i = 0; i < 32; i++) {
@@ -320,13 +340,30 @@
   [equipmentTab, consumablesTab, etcTab].forEach(createSlots);
 
   const inventoryItems = new Array(32).fill(null);
-  inventoryItems[0] = { name: '활', slot: 'weapon', type: 'bow' };
-  inventoryItems[1] = { name: '지팡이', slot: 'weapon', type: 'staff' };
-  inventoryItems[2] = { name: '모자', slot: 'hat' };
-  inventoryItems[3] = { name: '신발', slot: 'shoes' };
+
+  async function loadItemDatabase() {
+    const resp = await fetch('items.xlsx');
+    const data = await resp.arrayBuffer();
+    const workbook = XLSX.read(data, { type: 'array' });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet);
+    rows.forEach((row, i) => {
+      inventoryItems[i] = {
+        name: row.Name,
+        slot: row.Slot,
+        weaponType: row.WeaponType || null,
+        category: row.Category,
+        effect: row.Effect,
+        icon: row.Icon,
+        cooldown: row.Cooldown ? parseFloat(row.Cooldown) : 0
+      };
+    });
+    renderInventory();
+  }
+  loadItemDatabase();
 
   const equipmentSlots = {
-    weapon: { name: '검', slot: 'weapon', type: 'sword' },
+    weapon: { name: '검', slot: 'weapon', type: 'sword', cooldown: 0.5 },
     hat: null, top: null, bottom: null, shoes: null, gloves: null,
     cape: null, belt: null, shoulder: null, ear1: null, ear2: null,
     ring1: null, ring2: null, pet: null
@@ -335,6 +372,7 @@
   const inventorySlotDivs = equipmentTab.querySelectorAll('.slot');
   inventorySlotDivs.forEach((div, idx) => {
     div.addEventListener('dblclick', () => equipFromInventory(idx));
+    div.addEventListener('click', () => showItemDetails(inventoryItems[idx]));
   });
 
   const equipmentSlotDivs = equipmentPanel.querySelectorAll('.slot');
@@ -348,7 +386,7 @@
   function renderInventory() {
     inventorySlotDivs.forEach((div, idx) => {
       const item = inventoryItems[idx];
-      div.textContent = item ? item.name[0] : '';
+      div.textContent = item ? (item.icon || item.name[0]) : '';
     });
   }
 
@@ -356,7 +394,7 @@
     equipmentPanel.querySelectorAll('.slot').forEach(div => {
       const key = div.dataset.slot;
       const item = equipmentSlots[key];
-      div.textContent = item ? item.name[0] : '';
+      div.textContent = item ? (item.icon || item.name[0]) : '';
     });
   }
 
@@ -370,7 +408,9 @@
     renderInventory();
     renderEquipment();
     if (slotName === 'weapon') {
-      setWeapon(item.type);
+      weaponConfig[item.weaponType].cooldown = item.cooldown || 0;
+      weaponConfig[item.weaponType].lastAttack = 0;
+      setWeapon(item.weaponType);
     }
   }
 
@@ -387,6 +427,8 @@
     renderInventory();
     renderEquipment();
     if (slotName === 'weapon') {
+      weaponConfig.sword.cooldown = equipmentSlots.weapon ? equipmentSlots.weapon.cooldown : 0.5;
+      weaponConfig.sword.lastAttack = 0;
       setWeapon('sword');
     }
   }
@@ -394,6 +436,7 @@
   function showTab(name) {
     [equipmentTab, consumablesTab, etcTab].forEach(div => div.classList.remove('active'));
     document.getElementById(name + 'Tab').classList.add('active');
+    showItemDetails(null);
   }
   showTab('equipment');
 
@@ -401,8 +444,29 @@
     btn.addEventListener('click', () => showTab(btn.dataset.tab));
   });
 
+  function showItemDetails(item) {
+    if (!item) {
+      itemDetails.style.display = 'none';
+      itemDetails.innerHTML = '';
+      return;
+    }
+    itemDetails.innerHTML = `
+      <div style="font-size:32px">${item.icon || ''}</div>
+      <div>${item.name}</div>
+      <div>분류: ${item.category}</div>
+      <div>효과: ${item.effect}</div>
+      ${item.cooldown ? `<div>쿨타임: ${item.cooldown}초</div>` : ''}
+    `;
+    itemDetails.style.display = 'block';
+  }
+
   function toggleInventory() {
-    inventoryPanel.style.display = inventoryPanel.style.display === 'block' ? 'none' : 'block';
+    if (inventoryPanel.style.display === 'flex') {
+      inventoryPanel.style.display = 'none';
+      showItemDetails(null);
+    } else {
+      inventoryPanel.style.display = 'flex';
+    }
   }
   function toggleStatus() {
     statusPanel.style.display = statusPanel.style.display === 'block' ? 'none' : 'block';
@@ -413,6 +477,19 @@
   inventoryToggle.addEventListener('click', toggleInventory);
   statusToggle.addEventListener('click', toggleStatus);
   equipmentToggle.addEventListener('click', toggleEquipmentPanel);
+  fullscreenToggle.addEventListener('click', async () => {
+    if (!document.fullscreenElement) {
+      await document.documentElement.requestFullscreen();
+      if (screen.orientation && screen.orientation.lock) {
+        try { await screen.orientation.lock('landscape'); } catch (e) {}
+      }
+    } else {
+      await document.exitFullscreen();
+    }
+  });
+  document.addEventListener('fullscreenchange', () => {
+    fullscreenToggle.style.display = document.fullscreenElement ? 'none' : 'block';
+  });
 
   function updateStatusUI() {
     document.getElementById('levelValue').textContent = stats.level;
@@ -748,10 +825,11 @@
   let attackHeld = false;
 
   const weaponConfig = {
-    sword: { detect: 3, range: 1.5 },
-    bow: { detect: 10, speed: 0.3, radius: 0.1 },
-    staff: { detect: 8 }
+    sword: { detect: 3, range: 1.5, cooldown: 0, lastAttack: 0 },
+    bow: { detect: 10, speed: 0.3, radius: 0.1, cooldown: 0, lastAttack: 0 },
+    staff: { detect: 8, cooldown: 0, lastAttack: 0 }
   };
+  weaponConfig.sword.cooldown = equipmentSlots.weapon.cooldown;
   const projectiles = [];
 
   let currentWeapon = 'sword';
@@ -911,6 +989,9 @@
   function startAttack() {
     if (attacking) return;
     const cfg = weaponConfig[currentWeapon];
+    const now = performance.now();
+    if (now - cfg.lastAttack < (cfg.cooldown || 0) * 1000) return;
+    cfg.lastAttack = now;
     const detectRange = currentWeapon === 'sword' ? cfg.range : (cfg.range || cfg.detect);
     const target = getNearestMonster(detectRange);
     if (!target) return;
