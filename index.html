@@ -226,8 +226,8 @@
 <div id="statusToggle" class="ui-button">STAT</div>
 <div id="equipmentToggle" class="ui-button">EQUIP</div>
 <div id="fullscreenToggle" class="ui-button">FULL</div>
-<div id="reviveDialog">
-  <div>비석이 떨어지면 마을에서 부활합니다.</div>
+  <div id="reviveDialog">
+  <div>확인을 누르면 마을에서 부활합니다.</div>
   <button id="reviveConfirm">확인</button>
 </div>
 <div id="inventoryPanel" class="panel">
@@ -362,22 +362,51 @@
   const inventoryItems = new Array(32).fill(null);
 
   async function loadItemDatabase() {
-    const resp = await fetch('items.xlsx');
-    const data = await resp.arrayBuffer();
-    const workbook = XLSX.read(data, { type: 'array' });
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(sheet);
-    rows.forEach((row, i) => {
-      inventoryItems[i] = {
-        name: row.Name,
-        slot: row.Slot,
-        weaponType: row.WeaponType || null,
-        category: row.Category,
-        effect: row.Effect,
-        icon: row.Icon,
-        cooldown: row.Cooldown ? parseFloat(row.Cooldown) : 0
+    try {
+      const resp = await fetch('items.xlsx');
+      if (resp.ok) {
+        const data = await resp.arrayBuffer();
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(sheet);
+        rows.forEach((row, i) => {
+          inventoryItems[i] = {
+            name: row.Name,
+            slot: row.Slot,
+            weaponType: row.WeaponType || null,
+            category: row.Category,
+            effect: row.Effect,
+            icon: row.Icon,
+            cooldown: row.Cooldown ? parseFloat(row.Cooldown) : 0
+          };
+        });
+      }
+    } catch (e) {
+      console.error('Failed to load items.xlsx', e);
+    }
+
+    if (!inventoryItems[0]) {
+      inventoryItems[0] = {
+        name: '테스트 활',
+        slot: 'weapon',
+        weaponType: 'bow',
+        category: '장비',
+        effect: '',
+        icon: '🏹',
+        cooldown: 0
       };
-    });
+    }
+    if (!inventoryItems[1]) {
+      inventoryItems[1] = {
+        name: '테스트 지팡이',
+        slot: 'weapon',
+        weaponType: 'staff',
+        category: '장비',
+        effect: '',
+        icon: '🪄',
+        cooldown: 0
+      };
+    }
     renderInventory();
   }
   loadItemDatabase();
@@ -419,6 +448,7 @@
   }
 
   function equipFromInventory(index) {
+    if (dead) return;
     const item = inventoryItems[index];
     if (!item) return;
     const slotName = item.slot;
@@ -435,6 +465,7 @@
   }
 
   function unequipToInventory(slotName) {
+    if (dead) return;
     const item = equipmentSlots[slotName];
     if (!item) return;
     const emptyIndex = inventoryItems.findIndex(i => i === null);
@@ -494,9 +525,9 @@
   function toggleEquipmentPanel() {
     equipmentPanel.style.display = equipmentPanel.style.display === 'grid' ? 'none' : 'grid';
   }
-  inventoryToggle.addEventListener('click', toggleInventory);
-  statusToggle.addEventListener('click', toggleStatus);
-  equipmentToggle.addEventListener('click', toggleEquipmentPanel);
+  inventoryToggle.addEventListener('click', () => { if (!dead) toggleInventory(); });
+  statusToggle.addEventListener('click', () => { if (!dead) toggleStatus(); });
+  equipmentToggle.addEventListener('click', () => { if (!dead) toggleEquipmentPanel(); });
   fullscreenToggle.addEventListener('click', async () => {
     if (!document.fullscreenElement) {
       await document.documentElement.requestFullscreen();
@@ -818,6 +849,7 @@
   jumpInput.addEventListener('input', () => { jumpStrength = parseFloat(jumpInput.value); });
   gravityInput.addEventListener('input', () => { gravity = parseFloat(gravityInput.value); });
   document.addEventListener('keydown', (e) => {
+    if (dead) return;
     const key = e.key.toLowerCase();
     keys[key] = true;
     if (key === ' ') startJump();
@@ -828,7 +860,7 @@
     if (key === '2') setWeapon('bow');
     if (key === '3') setWeapon('staff');
   });
-  document.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
+  document.addEventListener('keyup', (e) => { if (!dead) keys[e.key.toLowerCase()] = false; });
 
   // On-screen joystick
   const joystick = document.getElementById('joystick');
@@ -870,6 +902,7 @@
     stats.mp = Math.floor(stats.maxMP * 0.1);
     updateStatusUI();
     player.position.copy(TOWN_POS);
+    player.visible = true;
     dead = false;
     tombstoneLanded = false;
   });
@@ -902,6 +935,7 @@
     dead = true;
     attackHeld = false;
     jumpHeld = false;
+    player.visible = false;
     const geom = new THREE.BoxGeometry(1, 2, 0.5);
     const mat = new THREE.MeshBasicMaterial({ color: 0x808080 });
     tombstone = new THREE.Mesh(geom, mat);
@@ -1008,7 +1042,7 @@
   joystick.addEventListener('pointercancel', resetPad);
 
   function startJump() {
-    if (isJumping) return;
+    if (dead || isJumping) return;
     isJumping = true;
     velocityY = jumpStrength;
     jumpMove.set(0, 0, 0);
@@ -1026,12 +1060,12 @@
     }
   }
 
-  jumpButton.addEventListener('pointerdown', () => { jumpHeld = true; startJump(); });
+  jumpButton.addEventListener('pointerdown', () => { if (dead) return; jumpHeld = true; startJump(); });
   jumpButton.addEventListener('pointerup', () => { jumpHeld = false; });
   jumpButton.addEventListener('pointercancel', () => { jumpHeld = false; });
 
   function startAttack() {
-    if (attacking) return;
+    if (dead || attacking) return;
     const cfg = weaponConfig[currentWeapon];
     const now = performance.now();
     if (now - cfg.lastAttack < (cfg.cooldown || 0) * 1000) return;
@@ -1069,7 +1103,7 @@
       }, 200);
     }
   }
-  attackButton.addEventListener('pointerdown', () => { attackHeld = true; startAttack(); });
+  attackButton.addEventListener('pointerdown', () => { if (dead) return; attackHeld = true; startAttack(); });
   attackButton.addEventListener('pointerup', () => { attackHeld = false; });
   attackButton.addEventListener('pointercancel', () => { attackHeld = false; });
 
