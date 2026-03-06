@@ -563,21 +563,22 @@
   scene.add(light);
   scene.add(new THREE.AmbientLight(0xffffff, 0.3));
 
-  // Terrain height function - flat center with irregular hills around the outskirts
+  // Terrain height function - completely flat
   function getHeight(x, z) {
-    const edgeStart = HALF_MAP - 20;
-    const distEdge = Math.max(Math.abs(x), Math.abs(z));
-    if (distEdge > edgeStart) {
-      const t = (distEdge - edgeStart) / 20;
-      const nx = x * 0.2;
-      const nz = z * 0.2;
-      const noise = Math.sin(nx) * Math.cos(nz) + Math.sin(nz * 0.5);
-      return Math.max(0, noise) / 2 * 5 * t;
-    }
     return 0;
   }
 
   // Ground with simple hill
+  const textureLoader = new THREE.TextureLoader();
+  const groundTexture = textureLoader.load('dirt.png');
+  groundTexture.magFilter = THREE.NearestFilter;
+  groundTexture.minFilter = THREE.NearestFilter;
+  groundTexture.wrapS = THREE.RepeatWrapping;
+  groundTexture.wrapT = THREE.RepeatWrapping;
+  groundTexture.repeat.set(MAP_SIZE / 2, MAP_SIZE / 2);
+  groundTexture.magFilter = THREE.NearestFilter;
+  groundTexture.minFilter = THREE.NearestFilter;
+
   const groundGeometry = new THREE.PlaneGeometry(MAP_SIZE, MAP_SIZE, 64, 64);
   const pos = groundGeometry.attributes.position;
   for (let i = 0; i < pos.count; i++) {
@@ -591,17 +592,14 @@
 
   const ground = new THREE.Mesh(
     groundGeometry,
-    new THREE.MeshLambertMaterial({ color: 0x228B22 })
+    new THREE.MeshLambertMaterial({ map: groundTexture })
   );
   ground.rotation.x = -Math.PI / 2;
   scene.add(ground);
 
-  // Raycaster-based height sampling to match rendered terrain
-  const groundRaycaster = new THREE.Raycaster();
+  // Terrain height sampling (flat)
   function getGroundHeight(x, z) {
-    groundRaycaster.set(new THREE.Vector3(x, 50, z), new THREE.Vector3(0, -1, 0));
-    const hit = groundRaycaster.intersectObject(ground, false);
-    return hit.length > 0 ? hit[0].point.y : 0;
+    return 0;
   }
 
   // Ground grid
@@ -622,17 +620,40 @@
   // Boundaries to keep player inside the map
   (function addBoundaries() {
     const wallHeight = 3;
-    const material = new THREE.MeshBasicMaterial({ color: 0x654321 });
+    const wallTexture = textureLoader.load('stone.png');
+  wallTexture.magFilter = THREE.NearestFilter;
+  wallTexture.minFilter = THREE.NearestFilter;
+    wallTexture.wrapS = THREE.RepeatWrapping;
+    wallTexture.wrapT = THREE.RepeatWrapping;
+
+    const materialH = new THREE.MeshBasicMaterial({ map: wallTexture });
+    const materialV = new THREE.MeshBasicMaterial({ map: wallTexture });
+
     const geomH = new THREE.BoxGeometry(MAP_SIZE, wallHeight, WALL_THICKNESS);
     const geomV = new THREE.BoxGeometry(WALL_THICKNESS, wallHeight, MAP_SIZE);
 
-    const north = new THREE.Mesh(geomH, material);
+    const north = new THREE.Mesh(geomH, materialH);
     north.position.set(0, wallHeight / 2, -HALF_MAP);
-    const south = new THREE.Mesh(geomH, material);
+    // adjust texture repetition for horizontal wall
+    const uvH = geomH.attributes.uv;
+    for (let i = 0; i < uvH.count; i++) {
+        uvH.setX(i, uvH.getX(i) * (MAP_SIZE / 2));
+        uvH.setY(i, uvH.getY(i) * wallHeight);
+    }
+
+    const south = new THREE.Mesh(geomH, materialH);
     south.position.set(0, wallHeight / 2, HALF_MAP);
-    const west = new THREE.Mesh(geomV, material);
+
+    const west = new THREE.Mesh(geomV, materialV);
     west.position.set(-HALF_MAP, wallHeight / 2, 0);
-    const east = new THREE.Mesh(geomV, material);
+    // adjust texture repetition for vertical wall
+    const uvV = geomV.attributes.uv;
+    for (let i = 0; i < uvV.count; i++) {
+        uvV.setX(i, uvV.getX(i) * (MAP_SIZE / 4));
+        uvV.setY(i, uvV.getY(i) * wallHeight);
+    }
+
+    const east = new THREE.Mesh(geomV, materialV);
     east.position.set(HALF_MAP, wallHeight / 2, 0);
 
     scene.add(north, south, west, east);
@@ -704,50 +725,26 @@
     return group;
   }
 
-  function createShop(name, color, x, z, iconDrawer) {
+  function createShop(name, textureName, x, z) {
     const shop = new THREE.Group();
-    const BUILDING_WIDTH = 8;
+    const BUILDING_WIDTH = 6;
     const BUILDING_HEIGHT = 6;
-    const BUILDING_DEPTH = 8;
+    const BUILDING_DEPTH = 6;
     const building = new THREE.Mesh(
       new THREE.BoxGeometry(BUILDING_WIDTH, BUILDING_HEIGHT, BUILDING_DEPTH),
-      new THREE.MeshBasicMaterial({ color })
+      new THREE.MeshBasicMaterial({ visible: false }) // invisible collider
     );
     building.position.y = BUILDING_HEIGHT / 2;
     shop.add(building);
 
-    const canvas = document.createElement('canvas');
-    canvas.width = 256;
-    canvas.height = 128;
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = '#000000';
-    ctx.font = '48px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(name, canvas.width / 2, canvas.height / 2);
-    const texture = new THREE.CanvasTexture(canvas);
-    const labelMaterial = new THREE.SpriteMaterial({ map: texture, depthTest: false });
-    const label = new THREE.Sprite(labelMaterial);
-    label.renderOrder = 1;
-    label.position.set(0, BUILDING_HEIGHT, BUILDING_DEPTH / 2 + 0.1);
-    label.scale.set(BUILDING_WIDTH + 2, 3, 1);
-    shop.add(label);
-
-    if (iconDrawer) {
-      const iconCanvas = document.createElement('canvas');
-      iconCanvas.width = 128;
-      iconCanvas.height = 128;
-      const iconCtx = iconCanvas.getContext('2d');
-      iconDrawer(iconCtx);
-      const iconTexture = new THREE.CanvasTexture(iconCanvas);
-      const iconMaterial = new THREE.SpriteMaterial({ map: iconTexture, depthTest: false, transparent: true });
-      const icon = new THREE.Sprite(iconMaterial);
-      icon.position.set(0, BUILDING_HEIGHT / 2, BUILDING_DEPTH / 2 + 0.1);
-      icon.scale.set(2, 2, 1);
-      shop.add(icon);
-    }
+    const houseTexture = textureLoader.load(textureName);
+    houseTexture.magFilter = THREE.NearestFilter;
+    houseTexture.minFilter = THREE.NearestFilter;
+    const spriteMaterial = new THREE.SpriteMaterial({ map: houseTexture, color: 0xffffff });
+    const sprite = new THREE.Sprite(spriteMaterial);
+    sprite.position.set(0, BUILDING_HEIGHT / 2, 0);
+    sprite.scale.set(BUILDING_WIDTH, BUILDING_HEIGHT, 1);
+    shop.add(sprite);
 
     const groundY = getGroundHeight(x, z);
     shop.position.set(x, groundY, z);
@@ -793,8 +790,8 @@
   const player = createPlayer();
   player.position.copy(TOWN_POS);
   scene.add(player);
-  scene.add(createShop('잡화상점', 0xffaa00, -5, -5, drawPotionIcon));
-  scene.add(createShop('장비상점', 0x00aaff, 5, -5, drawWeaponIcon));
+  scene.add(createShop('잡화상점', 'house1.png', -8, -5));
+  scene.add(createShop('장비상점', 'house2.png', 8, -5));
 
   const monsters = [];
   const MONSTER_RADIUS = 0.3;
