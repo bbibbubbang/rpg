@@ -2,3 +2,8 @@ __pycache__/
 *.pyc
 
 items.xlsx
+
+# Node / Testing
+node_modules/
+package-lock.json
+test-results/
